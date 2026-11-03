@@ -7,6 +7,7 @@
 node_modules/
 apps/dashboard/dist/
 apps/dashboard/coverage/
+*.tsbuildinfo
 npm-debug.log*
 
 # Java / Maven
