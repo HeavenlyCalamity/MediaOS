@@ -9,7 +9,7 @@ Media OS will eventually support multiple brands, content formats, publishing pl
 | Area | Decision |
 |---|---|
 | Infrastructure | Google Cloud Platform |
-| Reported trial credit | $300; owner reported approximately 84 days left on 2026-11-03. Verify in Billing Console before deployment. |
+| Reported trial credit | $300; owner reported 84 days remaining on 2026-11-03. Verify in Billing Console before deployment. |
 | Pilot brands | Two independent brands |
 | First content format | YouTube Shorts |
 | Publishing | Human approval required before every external publish |
@@ -54,6 +54,7 @@ The initial repository setup is being scaffolded. See:
 - [Product brief](docs/PRODUCT_BRIEF.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
+- [Codex local setup](docs/CODEX_START_HERE.md)
 - [First Codex task](docs/CODEX_FIRST_TASK.md)
 
 ## Local development principles
