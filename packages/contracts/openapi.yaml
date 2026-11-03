@@ -1,0 +1,22 @@
+openapi: 3.1.0
+info:
+  title: Media OS API
+  version: 0.1.0
+  description: Stage 0 contract skeleton; workflow endpoints are added in later stages.
+servers:
+  - url: http://localhost:8080
+paths:
+  /api/v1/health:
+    get:
+      summary: API health check
+      responses:
+        '200':
+          description: API is available
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [app, status]
+                properties:
+                  app: { type: string, example: mediaos-api }
+                  status: { type: string, enum: [UP] }
