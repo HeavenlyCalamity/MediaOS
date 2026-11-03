@@ -4,7 +4,7 @@
 
 ### Dashboard — React, TypeScript, Vite
 Responsibilities:
-- Brand selector and brand configuration.
+- Dynamic brand, category/subcategory, content pillar, audience profile, production profile, and channel configuration.
 - Content brief and script editor.
 - Production job status.
 - Video preview and metadata editor.
@@ -18,7 +18,7 @@ The frontend must never hold provider API keys, Google credentials, or YouTube r
 ### Core API — Java 21, Spring Boot
 Responsibilities:
 - Own the content lifecycle and state transitions.
-- Validate content requests and brand configuration.
+- Validate dynamic brand/category/channel configuration and content requests.
 - Create and track production jobs.
 - Provide signed, time-limited media access where necessary.
 - Store approval events and publish attempts.
@@ -95,9 +95,11 @@ Rules:
 - Changing the asset or publishing metadata invalidates the prior approval.
 - Retries must be idempotent and must not create duplicate jobs or uploads.
 
-## 4. Firestore data model (initial)
-Use collections:
+## 4. Niche-agnostic data model
+Use collections (Stage 1 may use local in-memory repositories; Firestore is a later adapter):
 - `brands/{brandId}`
+- `categories/{categoryId}` (optional `parentCategoryId` supports hierarchy)
+- `productionProfiles/{profileId}`
 - `channels/{channelId}`
 - `contentItems/{contentId}`
 - `productionJobs/{jobId}`
@@ -109,13 +111,19 @@ Use collections:
 Recommended document fields:
 
 ### Brand
-`name`, `slug`, `description`, `niche`, `language`, `tone`, `visualProfile`, `narrationProfile`, `defaultVideoProfile`, `enabled`, `createdAt`, `updatedAt`.
+`name`, `slug`, `description`, `defaultLanguage`, `tone`, `contentPillars[]`, `audienceProfile`, `enabled`, `createdAt`, `updatedAt`. Brands are user-created and may have many channels and production profiles.
+
+### Category and production profile
+Category: `name`, `slug`, `description`, `parentCategoryId`, `createdAt`, `updatedAt`. Production profile: `name`, optional `categoryId`, `contentFormat`, ordered `workflowStages[]`, and configurable `settings`.
+
+### Channel
+`brandId`, `platform`, `displayName`, optional platform account reference, connection status, and non-secret configuration. One brand may target many accounts, including multiple accounts on one platform. Stage 1 stores destination metadata only; it does not connect accounts or publish.
 
 ### Content item
-`brandId`, `title`, `workingTitle`, `contentType`, `language`, `status`, `brief`, `researchPacketRef`, `scriptRef`, `assetIds`, `renderedAssetId`, `renderChecksum`, `qaReportRef`, `metadata`, `version`, `createdAt`, `updatedAt`.
+`brandId`, `categoryId`, `title`, `workingTitle`, `contentType`, `language`, `status`, `brief`, `sourceRecords[]`, `assetIds`, `targetChannelIds[]`, production profile reference, `version`, `createdAt`, `updatedAt`.
 
 ### Asset
-`contentId`, `brandId`, `kind`, `storageUri`, `mimeType`, `checksum`, `sourceUrl`, `creator`, `licenseType`, `licenseEvidenceRef`, `attributionText`, `createdAt`.
+`contentId`, `brandId`, `kind`, `storageUri`, `mimeType`, `checksum`, `sourceUrl`, `owner`, `licenseType`, `licenseEvidenceRef`, `attributionText`, `permittedUses[]`, `createdAt`. Record rights for music, gameplay footage, and third-party visuals.
 
 ### Approval event
 `contentId`, `contentVersion`, `assetChecksum`, `metadataChecksum`, `decision`, `reviewerId`, `note`, `createdAt`.
@@ -138,7 +146,7 @@ Use versioned routes:
 - `GET /api/v1/dashboard/summary`
 - `GET /api/v1/content-items/{contentId}/export`
 
-Do not implement all endpoints in the initial scaffold. First build health checks, brand CRUD, content creation/list/detail, and state validation.
+Stage 1 builds CRUD for brands/categories, brand-associated channel and production profile configuration, content create/list/detail/update, and validated state transitions. It does not generate media, connect accounts, publish, or deploy.
 
 ## 6. Asset layout in Cloud Storage
 Use a private bucket with a predictable structure:

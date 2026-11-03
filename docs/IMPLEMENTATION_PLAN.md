@@ -22,17 +22,19 @@ Acceptance:
 Goal: create the first usable dashboard and backend domain.
 
 Deliver:
-- Brand configuration for multiple independent brands.
+- Dynamic brand management with user-defined brand count and no niche-specific application logic.
+- Dynamic hierarchical categories/subcategories, brand content pillars and audience profiles.
+- Multiple channel destinations per brand and configurable production profiles by category and content format.
 - Create/list/update content items.
 - Content state machine with validated transitions.
-- Job and asset metadata models.
-- Dashboard content list, detail view, brand selector, and basic forms.
+- Content source records and rights-aware asset metadata (ownership, license, attribution, permitted uses).
+- Dashboard brand/category/content lists, detail, and basic management forms.
 
 Acceptance:
-- Seed two provisional pilot brands.
-- Create a content item for either brand.
+- No fixed brands or categories are required; optional examples span several categories.
+- Create a brand, category/subcategory, channel destination, production profile, and content item through the API/dashboard.
 - Reject invalid state transitions.
-- Unit and API tests cover brand and content flows.
+- Unit and API tests cover CRUD, references, rights metadata, and content state transitions.
 
 ## Stage 2 — Deterministic Shorts rendering
 Goal: prove the media pipeline before integrating paid AI.
@@ -122,7 +124,7 @@ Acceptance:
 Goal: test the business, not just the software.
 
 Deliver:
-- Five reviewed Shorts for each pilot brand.
+- Five reviewed Shorts for each owner-selected pilot brand.
 - Manual or approved publishing.
 - Production time and cost tracking.
 - View duration/retention and subscriber conversion tracking where available.
@@ -130,7 +132,7 @@ Deliver:
 
 Acceptance:
 - Ten pilot videos produced and reviewed.
-- Compare performance across the two brands.
+- Compare performance across the selected brands and categories.
 - Decide whether to iterate, change one brand, or expand.
 
 ## Later (not MVP)

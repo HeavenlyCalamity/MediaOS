@@ -1,8 +1,8 @@
 # Media OS
 
-**A modular content production and operations platform for multiple digital media brands.**
+**A modular, niche-agnostic content production and operations platform for multiple digital media brands.**
 
-Media OS will eventually support multiple brands, content formats, publishing platforms, analytics, and monetization workflows. The first release is deliberately smaller: a human-reviewed Shorts Factory that can produce vertical videos for two independent pilot brands.
+Media OS supports user-defined brands and categories across content types and platforms. Its first production milestone is deliberately smaller: a human-reviewed Shorts workflow. Example brands are optional configurations, not product restrictions.
 
 ## Current decisions
 
@@ -10,7 +10,7 @@ Media OS will eventually support multiple brands, content formats, publishing pl
 |---|---|
 | Infrastructure | Google Cloud Platform |
 | Reported trial credit | $300; owner reported 84 days remaining on 2026-11-03. Verify in Billing Console before deployment. |
-| Pilot brands | Two independent brands |
+| Brand/category model | Dynamic user-managed brands, categories, and formats |
 | First content format | YouTube Shorts |
 | Publishing | Human approval required before every external publish |
 | Dashboard | React + TypeScript + Vite |
@@ -21,12 +21,9 @@ Media OS will eventually support multiple brands, content formats, publishing pl
 | Runtime | Cloud Run service + Cloud Run Jobs |
 | CI | GitHub Actions |
 
-## Pilot brands (provisional)
+## Example brand configurations (optional)
 
-1. **Cosmic Curiosity** — space, astronomy, and science explainers.
-2. **History Uncovered** — history, ancient civilizations, and evidence-based mysteries.
-
-These are working concepts, not approved channel names or existing accounts. Each brand has independent configuration, content records, assets, and publishing destinations.
+No brands or categories are required by the application. Users can define arbitrary categories and subcategories and create any number of brands. Cosmic Curiosity and History Uncovered are illustrative only; the same system supports gaming, music, education, finance, sports, storytelling, travel, food, technology, nature, and user-defined areas.
 
 ## MVP outcome
 
@@ -49,7 +46,8 @@ docs/               Product, architecture, and implementation docs
 
 ## Getting started
 
-Stage 0 provides three independently runnable local components. No cloud account,
+Stage 1 provides three independently runnable local components. The API currently
+uses in-memory storage, so configuration resets when the API stops. No cloud account,
 credentials, or paid API keys are needed. See:
 - [AGENTS.md](AGENTS.md) — instructions for Codex and contributors.
 - [Product brief](docs/PRODUCT_BRIEF.md)
@@ -72,9 +70,9 @@ parent/dependency versions, and `pyproject.toml`).
 ### Windows PowerShell
 
 ```powershell
-git switch codex/stage-0-scaffold
+git switch feature/stage-1-brand-management
 Set-Location apps/dashboard
-npm install
+npm ci
 npm run dev
 ```
 
@@ -92,14 +90,14 @@ Set-Location workers/shorts-worker
 py -3.12 -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e .
-mediaos-worker demo --brand-id cosmic-curiosity --brief "Why does the Moon look larger near the horizon?"
+mediaos-worker demo --brand-id sample-brand --brief "Why does the Moon look larger near the horizon?"
 ```
 
 ### Linux/macOS
 
 ```bash
-git switch codex/stage-0-scaffold
-cd apps/dashboard && npm install && npm run dev
+git switch feature/stage-1-brand-management
+cd apps/dashboard && npm ci && npm run dev
 ```
 
 In separate terminals from the repository root:
@@ -108,11 +106,13 @@ In separate terminals from the repository root:
 cd apps/api && mvn spring-boot:run
 cd workers/shorts-worker && python3.12 -m venv .venv && . .venv/bin/activate
 python -m pip install -e .
-mediaos-worker demo --brand-id cosmic-curiosity --brief "Why does the Moon look larger near the horizon?"
+mediaos-worker demo --brand-id sample-brand --brief "Why does the Moon look larger near the horizon?"
 ```
 
 The API health endpoint is `http://localhost:8080/api/v1/health`; the dashboard
-uses Vite on port 5173. The worker demo is deterministic and prints a JSON plan.
+uses Vite on port 5173 and proxies `/api` to the API. The dashboard supports dynamic
+brand/category management, channel destination metadata, configurable production
+profiles, and content metadata including source and asset rights records. The worker demo remains deterministic and prints a JSON plan.
 It does not render media or call AI services. Publishing is not implemented;
 future publishing must require an explicit human approval for the exact asset
 and metadata version.
@@ -141,5 +141,5 @@ This repository is currently public. Never commit secrets, real account identifi
 
 ## Status
 
-**Stage:** project handoff and initial scaffold.  
-**Next:** complete the first Codex task in [docs/CODEX_FIRST_TASK.md](docs/CODEX_FIRST_TASK.md).
+**Stage:** Stage 1 brand, category, production profile, channel destination, and content management.
+Optional examples are in [config/sample-configurations.json](config/sample-configurations.json); they are not loaded automatically.

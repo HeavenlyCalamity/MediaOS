@@ -1,6 +1,7 @@
 # Codex First Task — Scaffold the Media OS Monorepo
 
 Use this file as the first task prompt in Codex after connecting the repository.
+This is the historical Stage 0 scaffold task. Current product decisions in `AGENTS.md`, `README.md`, and `PRODUCT_BRIEF.md` supersede its illustrative brand selector wording; never treat example brands as a fixed product taxonomy.
 
 ## Prompt to give Codex
 
@@ -14,7 +15,7 @@ Implement **Stage 0 only** from the implementation plan. The goal is a clean, ru
 Requirements:
 - Inspect the existing repository first. Preserve all project docs and instructions.
 - Use stable, mutually compatible dependencies. Pin the versions you choose and explain them.
-- Create a simple dashboard shell with a Media OS header, brand selector containing the two provisional brands, an empty content queue, and a clear "Create Short" placeholder action. Do not build a polished full product yet.
+- Create a simple dashboard shell with a Media OS header and empty content queue. Any sample brands are optional data only; do not hardcode a fixed brand list or niche logic.
 - Add a Spring Boot health endpoint (for example `GET /api/v1/health`) that returns JSON with app name and status. Add a small API test.
 - Add a Python CLI command that accepts a brand ID and content brief, then prints a deterministic demo production plan in JSON. Do not call external LLM/TTS/image APIs.
 - Add unit tests for the Python CLI/domain logic.
