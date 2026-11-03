@@ -4,6 +4,7 @@
 !.env.example
 
 # Node
+*.tsbuildinfo
 node_modules/
 apps/dashboard/dist/
 apps/dashboard/coverage/
