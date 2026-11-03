@@ -49,13 +49,83 @@ docs/               Product, architecture, and implementation docs
 
 ## Getting started
 
-The initial repository setup is being scaffolded. See:
+Stage 0 provides three independently runnable local components. No cloud account,
+credentials, or paid API keys are needed. See:
 - [AGENTS.md](AGENTS.md) — instructions for Codex and contributors.
 - [Product brief](docs/PRODUCT_BRIEF.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Implementation plan](docs/IMPLEMENTATION_PLAN.md)
 - [Codex local setup](docs/CODEX_START_HERE.md)
 - [First Codex task](docs/CODEX_FIRST_TASK.md)
+
+### Prerequisites
+
+- Git
+- Node.js 22 LTS and npm 10+
+- Java 21 JDK
+- Apache Maven 3.9+
+- Python 3.12+
+
+Dependency versions are pinned in each component (`package-lock.json`, Maven
+parent/dependency versions, and `pyproject.toml`).
+
+### Windows PowerShell
+
+```powershell
+git switch codex/stage-0-scaffold
+Set-Location apps/dashboard
+npm install
+npm run dev
+```
+
+In a second PowerShell window, from the repository root:
+
+```powershell
+Set-Location apps/api
+mvn spring-boot:run
+```
+
+In a third window:
+
+```powershell
+Set-Location workers/shorts-worker
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e .
+mediaos-worker demo --brand-id cosmic-curiosity --brief "Why does the Moon look larger near the horizon?"
+```
+
+### Linux/macOS
+
+```bash
+git switch codex/stage-0-scaffold
+cd apps/dashboard && npm install && npm run dev
+```
+
+In separate terminals from the repository root:
+
+```bash
+cd apps/api && mvn spring-boot:run
+cd workers/shorts-worker && python3.12 -m venv .venv && . .venv/bin/activate
+python -m pip install -e .
+mediaos-worker demo --brand-id cosmic-curiosity --brief "Why does the Moon look larger near the horizon?"
+```
+
+The API health endpoint is `http://localhost:8080/api/v1/health`; the dashboard
+uses Vite on port 5173. The worker demo is deterministic and prints a JSON plan.
+It does not render media or call AI services. Publishing is not implemented;
+future publishing must require an explicit human approval for the exact asset
+and metadata version.
+
+### Local checks
+
+Run the component checks from their respective directories:
+
+```text
+Dashboard: npm run lint; npm test -- --run; npm run build
+API:       mvn test
+Worker:    python -m unittest discover -s tests
+```
 
 ## Local development principles
 
