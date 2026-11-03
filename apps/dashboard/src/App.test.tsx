@@ -1,9 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { approvalReminder, brands } from './App';
+import { approvalReminder, splitCommaList } from './domain';
 
-describe('dashboard scaffold', () => {
-  it('contains both provisional brands and the human approval reminder', () => {
-    expect(brands.map((brand) => brand.name)).toEqual(['Cosmic Curiosity', 'History Uncovered']);
-    expect(approvalReminder).toContain('review before it can be published');
+describe('dynamic dashboard configuration', () => {
+  it('parses user-defined categories and content pillars without a fixed taxonomy', () => {
+    expect(splitCommaList('Gaming, food, Custom category')).toEqual(['Gaming', 'food', 'Custom category']);
+    expect(splitCommaList('  music ,, storytelling  ')).toEqual(['music', 'storytelling']);
+  });
+
+  it('retains the explicit approval requirement for future publishing', () => {
+    expect(approvalReminder).toContain('review and approval');
   });
 });

@@ -1,7 +1,7 @@
 # AGENTS.md — Media OS
 
 ## Project objective
-Build Media OS: a modular, multi-brand, multi-platform content operations system. The first MVP is a human-reviewed YouTube Shorts production workflow for two pilot brands. The long-term roadmap may add long-form video, livestreams, other publishing platforms, analytics, monetization tracking, and a SaaS offering.
+Build Media OS: a modular, niche-agnostic, multi-brand, multi-platform content operations system. The first MVP is a human-reviewed YouTube Shorts production workflow. The long-term roadmap may add long-form video, livestreams, other publishing platforms, analytics, monetization tracking, and a SaaS offering.
 
 ## Read first
 Before changing code, read:
@@ -16,12 +16,13 @@ If a user task conflicts with these documents, follow the latest explicit user i
 ## Current product decisions
 - Cloud provider: Google Cloud Platform.
 - Trial status reported by the owner on 2026-11-03: $300 Free Trial credit, approximately 84 days remaining. Treat this as user-reported; never assume the live balance or expiration without checking Billing Console.
-- Initial launch: two separate pilot brands, not one mixed-niche channel.
+- Media OS is niche-agnostic. Users can create any number of brands and categories; illustrative pilot brands are optional sample data only.
 - First production format: vertical short-form video.
 - Publishing mode: human approval required before every external publish action.
 - Initial output: render, preview, approve, and export; do not make unattended publishing the first milestone.
 - First social publishing target: YouTube Shorts. Keep platform integrations behind adapters so other platforms can be added later.
-- Initial example brands are provisional: Cosmic Curiosity (space/science) and History Uncovered (history). Do not create channels, accounts, or handles automatically.
+- Optional examples may include Cosmic Curiosity and History Uncovered, but no brand/category is required or privileged by core logic. Do not create channels, accounts, or handles automatically.
+- Categories, subcategories, content pillars, production profiles, formats, and platform destinations are user-managed data, not hardcoded product enums.
 
 ## Architecture guardrails
 - Dashboard: React + TypeScript + Vite.

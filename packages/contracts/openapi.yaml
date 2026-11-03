@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: Media OS API
-  version: 0.1.0
-  description: Stage 0 contract skeleton; workflow endpoints are added in later stages.
+  version: 0.2.0
+  description: Niche-agnostic local Stage 1 API. All taxonomies and formats are user-defined.
 servers:
   - url: http://localhost:8080
 paths:
@@ -12,11 +12,92 @@ paths:
       responses:
         '200':
           description: API is available
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [app, status]
-                properties:
-                  app: { type: string, example: mediaos-api }
-                  status: { type: string, enum: [UP] }
+  /api/v1/brands:
+    get:
+      summary: List user-created brands
+      responses:
+        '200': { description: Brand list }
+    post:
+      summary: Create a brand with configurable pillars and audience profile
+      responses:
+        '200': { description: Created brand }
+  /api/v1/brands/{id}:
+    get:
+      summary: Get a brand
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Brand }
+    put:
+      summary: Update a brand
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Updated brand }
+  /api/v1/categories:
+    get:
+      summary: List dynamic categories and subcategories
+      responses:
+        '200': { description: Category list }
+    post:
+      summary: Create a category or subcategory
+      responses:
+        '200': { description: Created category }
+  /api/v1/categories/{id}:
+    put:
+      summary: Update a category
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Updated category }
+    delete:
+      summary: Delete an unused category
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '204': { description: Deleted category }
+  /api/v1/brands/{brandId}/channels:
+    get:
+      summary: List destinations attached to a brand
+      parameters: [{ name: brandId, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Channel destination list }
+  /api/v1/channels:
+    post:
+      summary: Add platform destination metadata without connecting or publishing
+      responses:
+        '200': { description: Created destination }
+  /api/v1/production-profiles:
+    get:
+      summary: List configurable production profiles
+      parameters: [{ name: brandId, in: query, required: false, schema: { type: string } }]
+      responses:
+        '200': { description: Production profile list }
+    post:
+      summary: Create a profile by optional category and user-defined content format
+      responses:
+        '200': { description: Created production profile }
+  /api/v1/content-items:
+    get:
+      summary: List content items, optionally filtered by brand
+      parameters: [{ name: brandId, in: query, required: false, schema: { type: string } }]
+      responses:
+        '200': { description: Content item list }
+    post:
+      summary: Create content with sources, rights records, and platform targets
+      responses:
+        '200': { description: Content item in IDEA state }
+  /api/v1/content-items/{id}:
+    get:
+      summary: Get content item detail
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Content item }
+    put:
+      summary: Update content metadata; increments its version
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Updated content item }
+  /api/v1/content-items/{id}/transition:
+    post:
+      summary: Request a validated content lifecycle transition
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      responses:
+        '200': { description: Transitioned content item }
+        '400': { description: Invalid transition }

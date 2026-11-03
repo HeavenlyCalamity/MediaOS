@@ -1,0 +1,45 @@
+{
+  "note": "Optional examples only. The application does not seed these automatically or require these brands/categories.",
+  "brands": [
+    {
+      "name": "Arcade Atlas",
+      "slug": "arcade-atlas",
+      "description": "Game design, playthroughs, and community stories.",
+      "defaultLanguage": "en",
+      "contentPillars": ["Game guides", "Design analysis", "Player stories"],
+      "audienceProfile": { "primaryAudience": "Players interested in game design" }
+    },
+    {
+      "name": "Kitchen Notes",
+      "slug": "kitchen-notes",
+      "description": "Practical food education and recipe storytelling.",
+      "defaultLanguage": "en",
+      "contentPillars": ["Technique", "Ingredients", "Food history"],
+      "audienceProfile": { "primaryAudience": "Curious home cooks" }
+    },
+    {
+      "name": "Sound Bench",
+      "slug": "sound-bench",
+      "description": "Music craft, listening guides, and production education.",
+      "defaultLanguage": "en",
+      "contentPillars": ["Production", "Listening", "Artist context"],
+      "audienceProfile": { "primaryAudience": "Independent musicians and listeners" }
+    }
+  ],
+  "categories": [
+    { "name": "Gaming", "slug": "gaming", "parentCategoryId": null },
+    { "name": "Music", "slug": "music", "parentCategoryId": null },
+    { "name": "Education", "slug": "education", "parentCategoryId": null },
+    { "name": "Science", "slug": "science", "parentCategoryId": null },
+    { "name": "History", "slug": "history", "parentCategoryId": null },
+    { "name": "Travel", "slug": "travel", "parentCategoryId": null },
+    { "name": "Food", "slug": "food", "parentCategoryId": null },
+    { "name": "Technology", "slug": "technology", "parentCategoryId": null },
+    { "name": "Nature", "slug": "nature", "parentCategoryId": null },
+    { "name": "Personal Finance", "slug": "finance", "parentCategoryId": null },
+    { "name": "Sports", "slug": "sports", "parentCategoryId": null },
+    { "name": "Animation", "slug": "animation", "parentCategoryId": null },
+    { "name": "Storytelling", "slug": "storytelling", "parentCategoryId": null },
+    { "name": "Entertainment", "slug": "entertainment", "parentCategoryId": null }
+  ]
+}

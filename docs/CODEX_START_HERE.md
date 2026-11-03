@@ -41,27 +41,16 @@ Open the cloned `MediaOS` folder in IntelliJ IDEA. Open its integrated terminal 
 
 Alternatively, open the repository folder in VS Code and install the official Codex extension if available in your setup. Follow the extension's sign-in flow.
 
-## First task prompt
+## Current continuation prompt
 
 ```text
-Read AGENTS.md, README.md, docs/PRODUCT_BRIEF.md, docs/ARCHITECTURE.md,
-docs/IMPLEMENTATION_PLAN.md, and docs/CODEX_FIRST_TASK.md.
-
-Implement Stage 0 only, following docs/CODEX_FIRST_TASK.md exactly.
-Inspect the repository before editing and preserve all existing documentation.
-
-Create the React + TypeScript + Vite dashboard shell, Java 21 + Spring Boot API
-with a tested health endpoint, and Python shorts-worker CLI in deterministic
-mock/dry-run mode. Add tests and GitHub Actions CI. Ensure setup instructions
-cover Windows PowerShell and Linux/macOS.
-
-Do not create or deploy Google Cloud resources, enable paid services, create
-OAuth credentials, publish videos, or add real paid AI integrations. Keep the
-human-approval-before-publishing rule. Do not start Stage 1 until Stage 0 passes.
-
-Work on a new branch named codex/stage-0-scaffold. Run the available checks.
-At the end, report the files changed, exact commands run, test results,
-dependency versions, and remaining manual steps. Do not claim deployment.
+Read `AGENTS.md`, `README.md`, `docs/PRODUCT_BRIEF.md`, `docs/ARCHITECTURE.md`,
+and `docs/IMPLEMENTATION_PLAN.md`. Implement only the active requested stage.
+Media OS is niche-agnostic: brands, categories, subcategories, formats, content
+pillars, audience profiles, production profiles, and destinations are user data.
+Do not add generation, external publishing, or GCP deployment unless requested.
+Require explicit human approval before any future external publishing. Preserve
+existing docs, run available checks, and report files, results, and limitations.
 ```
 
 ## Git workflow

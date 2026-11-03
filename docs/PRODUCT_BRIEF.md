@@ -6,11 +6,9 @@ Build an owned digital-media operating system that helps a small team operate mu
 Media OS is not a single YouTube channel, a generic AI video generator, or a mass-upload bot. It is an internal operating platform for original media brands.
 
 ## Initial business experiment
-Launch two independent pilot brands using one shared production system:
-- **Cosmic Curiosity (provisional):** space, astronomy, and science explainers.
-- **History Uncovered (provisional):** history, ancient civilizations, and evidence-based mysteries.
+Media OS is niche-agnostic. Users can create any number of independent brands, categories, subcategories, content pillars, audience profiles, and publishing destinations. Gaming, music, entertainment, education, science, history, finance, sports, animation, storytelling, travel, food, technology, nature, and user-defined categories are all data configurations, not application logic.
 
-The owner may change these brand concepts before production. Keep brand definitions data-driven; do not hard-code niche assumptions into the worker.
+Cosmic Curiosity (space/science) and History Uncovered (history) are optional provisional examples only. They are not required seed records, defaults, or product restrictions. Keep all brand and category definitions data-driven.
 
 ## Target user
 Initially, one owner/operator who controls brand settings, creates content, reviews rendered videos, approves publishing, and studies analytics. Design the data model so multiple users and roles can be added later, but do not build SaaS tenancy or complex RBAC in the first milestone.
@@ -29,6 +27,10 @@ A user should be able to:
 10. Preview the result and metadata in a review screen.
 11. Approve or reject the exact rendered version.
 12. Export the MP4 and metadata. Add platform publishing once the review-and-export loop is reliable.
+
+Brands own configurable content pillars, audience profiles, production profiles, and multiple publishing destinations. Content items reference a brand, category, format/type, language, source records, rights-managed assets, and zero or more platform targets. Production profiles are configurable by category and format so different content types need not share identical workflows.
+
+Asset records capture ownership, license, attribution, and permitted uses. Rights must be explicit for music, gameplay footage, and third-party visuals.
 
 ## Initial video profile
 - Target canvas: 1080 × 1920 (9:16).
@@ -59,7 +61,7 @@ The first pilot is an engineering and audience-validation experiment, not a reve
 - The review screen shows the video, script, sources, rights information, and publishing metadata.
 - Approval/rejection works and is auditable.
 - The approved MP4 and metadata can be exported.
-- Ten pilot videos (five per brand) can be produced, reviewed, and published manually before we invest in scale.
+- Ten pilot videos can be produced and reviewed across owner-selected brands before we invest in scale.
 - Measure production time, direct cost per video, view duration/retention where available, and subscriber conversion. Do not assume views or income.
 
 ## Later roadmap
