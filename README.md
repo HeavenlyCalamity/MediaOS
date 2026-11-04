@@ -46,7 +46,7 @@ docs/               Product, architecture, and implementation docs
 
 ## Getting started
 
-Stage 1 provides three independently runnable local components. The API currently
+Stage 2 provides three independently runnable local components. The API currently
 uses in-memory storage, so configuration resets when the API stops. No cloud account,
 credentials, or paid API keys are needed. See:
 - [AGENTS.md](AGENTS.md) — instructions for Codex and contributors.
@@ -112,10 +112,12 @@ mediaos-worker demo --brand-id sample-brand --brief "Why does the Moon look larg
 The API health endpoint is `http://localhost:8080/api/v1/health`; the dashboard
 uses Vite on port 5173 and proxies `/api` to the API. The dashboard supports dynamic
 brand/category management, channel destination metadata, configurable production
-profiles, and content metadata including source and asset rights records. The worker demo remains deterministic and prints a JSON plan.
-It does not render media or call AI services. Publishing is not implemented;
+profiles, and content metadata including source and asset rights records. The worker demo remains deterministic and prints a JSON plan. The Stage 2 worker also validates manifests and renders local video with FFmpeg. It does not call AI services. Publishing is not implemented;
 future publishing must require an explicit human approval for the exact asset
 and metadata version.
+
+See [worker rendering setup and manifest reference](docs/RENDERING.md) for FFmpeg
+installation, synthetic fixture generation, render commands, and QA details.
 
 ### Local checks
 
@@ -124,7 +126,7 @@ Run the component checks from their respective directories:
 ```text
 Dashboard: npm run lint; npm test -- --run; npm run build
 API:       mvn test
-Worker:    python -m unittest discover -s tests
+Worker:    python -m unittest discover -s tests -v (FFmpeg enables real rendering integration coverage)
 ```
 
 ## Local development principles
@@ -141,5 +143,5 @@ This repository is currently public. Never commit secrets, real account identifi
 
 ## Status
 
-**Stage:** Stage 1 brand, category, production profile, channel destination, and content management.
+**Stage:** Stage 2 deterministic local rendering, following Stage 1 brand, category, production profile, channel destination, and content management.
 Optional examples are in [config/sample-configurations.json](config/sample-configurations.json); they are not loaded automatically.

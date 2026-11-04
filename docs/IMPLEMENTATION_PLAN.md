@@ -52,6 +52,11 @@ Acceptance:
 - Output is playable and passes automated checks.
 - A failed render returns a clear error and does not mark the content ready.
 
+**Status (2026-11-04):** Implemented in `workers/shorts-worker`; see
+[`docs/RENDERING.md`](RENDERING.md) for manifest v1.0, setup, QA, and integration
+test commands. Rendering does not transition API content state or approve
+content; Stage 3 owns the human review gate.
+
 ## Stage 3 — Review and export
 Goal: implement the human approval gate.
 

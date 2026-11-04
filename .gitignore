@@ -26,6 +26,8 @@ venv/
 
 # Generated media and local output
 media-output/
+workers/shorts-worker/media-output/
 *.mp4
+*.mp4.qa.json
 *.wav
 *.mp3

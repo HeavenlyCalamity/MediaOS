@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0",
+  "job": {
+    "job_id": "fixture-stage-2",
+    "content_id": "fixture-content",
+    "brand_id": "sample-brand"
+  },
+  "content": {
+    "format": "short-form video",
+    "production_profile_id": "shorts-vertical-v1"
+  },
+  "visuals": [
+    {
+      "asset_id": "fixture-visual-1",
+      "kind": "image",
+      "path": "visual-1.ppm",
+      "order": 1,
+      "source_reference": "generated://mediaos-stage-2-fixture",
+      "rights": {
+        "owner": "Media OS test fixture",
+        "license_type": "owned",
+        "permitted_uses": [
+          "testing",
+          "rendering"
+        ]
+      }
+    },
+    {
+      "asset_id": "fixture-visual-2",
+      "kind": "image",
+      "path": "visual-2.ppm",
+      "order": 2,
+      "source_reference": "generated://mediaos-stage-2-fixture",
+      "rights": {
+        "owner": "Media OS test fixture",
+        "license_type": "owned",
+        "permitted_uses": [
+          "testing",
+          "rendering"
+        ]
+      }
+    }
+  ],
+  "audio": {
+    "asset_id": "fixture-tone",
+    "path": "narration.wav",
+    "required": true,
+    "source_reference": "generated://440hz-synthetic-tone",
+    "rights": {
+      "owner": "Media OS test fixture",
+      "license_type": "owned",
+      "permitted_uses": [
+        "testing",
+        "rendering"
+      ]
+    }
+  },
+  "subtitles": {
+    "path": "captions.srt",
+    "settings": {
+      "font_size": 48,
+      "margin_vertical": 160
+    }
+  },
+  "render": {
+    "profile": "shorts-vertical-v1",
+    "duration_seconds": 8,
+    "audio_required": true
+  },
+  "expected_output": "../media-output/sample-render.mp4"
+}
