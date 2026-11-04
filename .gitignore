@@ -27,6 +27,9 @@ venv/
 # Generated media and local output
 media-output/
 workers/shorts-worker/media-output/
+\.mediaos/
+mediaos-data/
+apps/api/mediaos-data/
 *.mp4
 *.mp4.qa.json
 *.wav

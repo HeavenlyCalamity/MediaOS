@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { approvalReminder, splitCommaList } from './domain';
+import ReviewWorkspace from './ReviewWorkspace';
 
 type Brand = { id: string; name: string; slug: string; description: string; defaultLanguage: string; tone: string; contentPillars: string[]; audienceProfile: Record<string, string> };
 type Category = { id: string; name: string; slug: string; description: string; parentCategoryId: string | null };
@@ -139,6 +140,7 @@ export default function App() {
     <main className="app-shell">
       <header className="topbar">
         <a className="wordmark" href="#home"><span className="mark">M</span> MEDIA<span className="muted">OS</span></a>
+        <nav className="workspace-nav" aria-label="Workspace navigation"><a href="#review">Review studio</a><a href="#management">Configure</a></nav>
         <span className="stage">LOCAL WORKSPACE <i /></span>
       </header>
       <section className="intro">
@@ -150,7 +152,9 @@ export default function App() {
       </section>
       {(error || notice) && <div className={error ? 'flash error' : 'flash success'} role="status">{error || notice}</div>}
 
-      <div className="management-grid">
+      <ReviewWorkspace brands={brands} categories={categories} onContentUpdated={refresh} />
+
+      <div id="management" className="management-grid">
         <section className="panel"><div className="panel-heading"><div><p className="eyebrow">CONFIGURATION</p><h2>Brands</h2></div><span className="badge">{brands.length}</span></div>
           <form onSubmit={(event) => { event.preventDefault(); void run(async () => {
             const payload = { name: brandForm.name, slug: brandForm.slug, description: brandForm.description, defaultLanguage: brandForm.defaultLanguage,

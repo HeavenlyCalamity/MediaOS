@@ -1,4 +1,4 @@
-# Stage 2 local rendering
+# Stage 2 local rendering and Stage 3 review integration
 
 The worker in `workers/shorts-worker` renders a versioned local manifest through
 FFmpeg. It uses subprocess argument arrays (no shell), then inspects the output
@@ -107,6 +107,41 @@ cover FFprobe readability, dimensions, codec, frame rate, required audio, and
 duration (150 ms tolerance). A one-second black interval is a review warning;
 black detection is heuristic and frozen-frame classification is not implemented.
 Visually review output before any later human approval.
+
+## Attach a render for Stage 3 review
+
+The dashboard review studio registers a Stage 2 output with
+`POST /api/v1/content-items/{contentId}/render-artifacts` as multipart fields
+`video`, `manifest`, and `qaReport`. It uses the actual Stage 2 v1.0 schema above:
+manifest `schema_version`, `job.job_id/content_id/brand_id`, `render.profile`, and
+ordered `visuals`; QA `status`, matching IDs and job ID, `checks`,
+`output_metadata`, `manifest`, and `sha256`. The API requires every mandatory QA
+check to be true, recomputes SHA-256 server-side, and compares FFprobe metadata
+against both the uploaded MP4 and QA report. The MP4 is limited to 500 MiB by
+default (`MEDIAOS_MAX_VIDEO_BYTES`); each JSON file is limited to 2 MiB. The
+artifact's local file path is never accepted from or returned to the browser.
+
+## Stage 3 approval and export
+
+After attaching a valid render, the dashboard shows the real MP4 preview, stream
+metadata, QA checks, source records, and asset-rights information. The content
+editor exposes title, description, script, language, tags, selected destinations,
+and platform metadata. The API captures a content snapshot and deterministic
+metadata checksum on approval. Canonicalization uses JSON UTF-8 with object keys
+sorted recursively and array order preserved. Changes to content version,
+metadata checksum, render ID, or render checksum invalidate the prior approval;
+the event remains in history. Rejected content requires the explicit resubmit
+endpoint and a note before another decision.
+
+Only an active valid approval can be exported. The ZIP has exactly these files:
+`video.mp4`, `metadata.json`, `sources-and-rights.json`,
+`production-manifest.json`, `qa-report.json`, and `approval.json`. A separate
+approved MP4 download is available. Both exports refer to the render ID in the
+approval event. Local review state and artifacts live in `MEDIAOS_DATA_DIR`
+(default `~/.mediaos` or `%USERPROFILE%\\.mediaos`). It persists across restarts,
+but this JSON adapter is single-process and provides no authentication, encryption,
+cross-process locking, or tamper-proof audit guarantee. Reviewer identity is
+self-attested. Do not expose this local API to untrusted networks.
 
 Integration verification (a real render when FFmpeg is installed):
 

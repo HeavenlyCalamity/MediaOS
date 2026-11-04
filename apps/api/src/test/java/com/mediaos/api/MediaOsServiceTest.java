@@ -3,8 +3,11 @@ package com.mediaos.api;
 import static com.mediaos.api.Models.*;
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.io.TempDir;
+import java.nio.file.Path;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -71,7 +74,8 @@ class MediaOsServiceTest {
             service.transitionContent(item.id(), state);
         assertThrows(IllegalArgumentException.class, () -> service.transitionContent(item.id(), "APPROVED"),
                 "Stage 1 must not create an approval without an approval record");
-        assertEquals("REJECTED", service.transitionContent(item.id(), "REJECTED").status());
+        assertThrows(IllegalArgumentException.class, () -> service.transitionContent(item.id(), "REJECTED"),
+                "rejection must be an explicit review decision with a reason");
         assertThrows(ConflictException.class, () -> service.deleteCategory(category.id()));
     }
 
@@ -86,5 +90,19 @@ class MediaOsServiceTest {
         ContentItemRequest incompleteRights = new ContentItemRequest(owner.id(), null, "Title", "podcast", "en", "", null,
                 List.of(), List.of(), List.of(new AssetRequest("music", "", "", "", "", "", "", List.of("social"))));
         assertThrows(IllegalArgumentException.class, () -> service.createContent(incompleteRights));
+    }
+
+    @Test
+    void localApplicationStateSurvivesServiceRestart(@TempDir Path directory) {
+        ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
+        MediaOsService firstRun = new MediaOsService(mapper, directory.toString());
+        Brand brand = firstRun.createBrand(new BrandRequest("Persistent Brand", "persistent-brand", "", "en", "", List.of(), Map.of()));
+        ContentItem content = firstRun.createContent(new ContentItemRequest(brand.id(), null, "Saved item", "podcast", "en", "", null,
+                List.of(), List.of(), List.of()));
+
+        MediaOsService afterRestart = new MediaOsService(mapper, directory.toString());
+        assertEquals(brand.id(), afterRestart.getBrand(brand.id()).id());
+        assertEquals(content.id(), afterRestart.getContent(content.id()).id());
+        assertEquals("Saved item", afterRestart.getContent(content.id()).title());
     }
 }

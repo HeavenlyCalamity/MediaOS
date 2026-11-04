@@ -16,13 +16,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/content-items")
 public class ContentItemController {
     private final MediaOsService service;
-    public ContentItemController(MediaOsService service) { this.service = service; }
+    private final ReviewService reviewService;
+    public ContentItemController(MediaOsService service, ReviewService reviewService) {
+        this.service = service;
+        this.reviewService = reviewService;
+    }
 
     @GetMapping public List<ContentItem> list(@RequestParam(required = false) String brandId) { return service.listContent(brandId); }
     @PostMapping public ContentItem create(@RequestBody ContentItemRequest request) { return service.createContent(request); }
     @GetMapping("/{id}") public ContentItem get(@PathVariable String id) { return service.getContent(id); }
     @PutMapping("/{id}") public ContentItem update(@PathVariable String id, @RequestBody ContentItemRequest request) {
-        return service.updateContent(id, request);
+        return reviewService.updateContent(id, request);
     }
     @PostMapping("/{id}/transition") public ContentItem transition(@PathVariable String id, @RequestBody TransitionRequest request) {
         return service.transitionContent(id, request.status());

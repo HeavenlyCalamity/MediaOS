@@ -130,6 +130,27 @@ Category: `name`, `slug`, `description`, `parentCategoryId`, `createdAt`, `updat
 
 Store timestamps in UTC. Use stable IDs. Do not put large video/audio/image bytes in Firestore; store objects in Cloud Storage and keep references/metadata in documents.
 
+### Local Stage 3 review storage
+
+The local API writes `api-state.json` and `review-state.json` atomically under
+`MEDIAOS_DATA_DIR` (default `%USERPROFILE%\\.mediaos` or `~/.mediaos`). Render
+files live under that directory's `artifacts/{generated-uuid}/` folders. Browser
+requests identify artifacts only by generated IDs; they cannot submit server paths.
+The JSON store survives process restarts but supports one API process only and has
+no cross-process locking, encryption, backup, authentication, or tamper-proof audit
+guarantees. Reviewer identity is self-attested. This is local workflow storage,
+not the eventual Firestore/Cloud Storage adapter.
+
+Approval is a separate service action and cannot be requested through the generic
+status transition endpoint. It captures the content snapshot, selected
+destinations, render artifact ID and SHA-256, content version, and a metadata
+SHA-256. Canonical metadata is UTF-8 JSON with recursively sorted object keys and
+preserved array order over content identity/version, brand/category labels, format,
+title, description, script, brief, language, tags, profile, source records,
+rights-bearing assets, destination IDs, and platform metadata. A changed version,
+checksum, or artifact invalidates the event; events remain in local history. Export
+reads the artifact referenced by the valid approval event, never a later render.
+
 ## 5. Initial API surface
 Use versioned routes:
 - `POST /api/v1/brands`
