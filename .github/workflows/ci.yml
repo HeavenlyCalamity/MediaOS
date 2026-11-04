@@ -36,8 +36,13 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - name: Install FFmpeg for synthetic review API integration tests
         run: sudo apt-get update && sudo apt-get install --yes ffmpeg
+      - name: Install local worker package for API production integration test
+        run: python -m pip install --no-deps -e ../../workers/shorts-worker
       - run: mvn --batch-mode verify
 
   shorts-worker:

@@ -87,11 +87,19 @@ Deliver:
 - Mock providers remain available for tests.
 - Store model/provider/version/cost metadata and original prompts.
 - Rate limits, timeouts, bounded retries, and graceful errors.
+- Local idempotent production jobs connecting provider output to the Stage 2 manifest/renderer and Stage 3 review registration.
+- Deterministic mock providers for all four capabilities and a disabled-by-default OpenAI-compatible script adapter.
+- Production workspace for job progress, research, script editing, synthetic assets, usage, and review handoff.
 
 Acceptance:
-- Full workflow can run in mock mode.
-- A real provider can be enabled by config and Secret Manager values.
+- The mock workflow renders an actual Stage 2 MP4 and registers it pending Stage 3 review.
+- The optional real script adapter requires explicit local environment enablement and credentials. Secret Manager is deferred to Stage 5.
 - No real provider token is required for CI.
+
+**Status (2026-11-04):** Implemented locally. See [`docs/PROVIDERS.md`](PROVIDERS.md)
+for provider selection, mock/real configuration, limits, cost reporting, and
+troubleshooting. Local JSON stores remain development-only and do not provide
+authenticated or tamper-proof production audit operation.
 
 ## Stage 5 — Google Cloud deployment
 Goal: deploy only after local workflow works.

@@ -61,7 +61,11 @@ Define interfaces before integrating paid providers:
 - `JobDispatcher`
 - `Publisher` (later)
 
-Provide deterministic fake/mock implementations for local development and CI. The app and tests must work without API keys or network access. Provider selection must be configured by brand or environment, not embedded in business logic.
+Provide deterministic fake/mock implementations for local development and CI. The app and tests must work without API keys or network access. Provider selection resolves per capability, with API defaults and optional brand/category/profile overrides; profile workflow JSON applies last. Provider secrets remain local environment variables and are never returned to the browser. The `SecretResolver` abstraction is local-only in Stage 4; Secret Manager is deferred to Stage 5.
+
+Stage 4 uses the local Spring API job dispatcher and Python provider registry. `ProductionExecutionAdapter` isolates local subprocess execution so a future job dispatcher can replace it. Jobs are idempotent, persisted as local JSON, and use the Stage 2 renderer and Stage 3 artifact registration rather than duplicating render or approval logic. The implemented renderer is only `shorts-vertical-v1`; other format workflows receive an unsupported-renderer state. Mock narration is a synthetic tone, and mock visuals are local synthetic test assets with restricted local usage. User-supplied sources are organized without URL fetching. Optional OpenAI-compatible script generation is disabled unless separately enabled and credentialed in the API's local environment.
+
+Provider configuration examples and safeguards are documented in [`PROVIDERS.md`](PROVIDERS.md). Local job/content/review JSON stores remain single-process development persistence; they are neither authenticated nor tamper-proof audit records.
 
 Do not assume that one AI provider can perform all tasks or that a GCP trial credit covers every third-party API.
 
@@ -150,6 +154,9 @@ title, description, script, brief, language, tags, profile, source records,
 rights-bearing assets, destination IDs, and platform metadata. A changed version,
 checksum, or artifact invalidates the event; events remain in local history. Export
 reads the artifact referenced by the valid approval event, never a later render.
+Editing content after a render detaches and deactivates that artifact and returns
+the item to `ASSETS_READY`. A fresh render must be registered before review can
+resume. Rejected content remains rejected until the explicit resubmission action.
 
 ## 5. Initial API surface
 Use versioned routes:

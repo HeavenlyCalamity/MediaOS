@@ -82,4 +82,18 @@ public final class Models {
     public record ExportPackage(String exportId, String contentId, Instant exportedAt,
                                 String approvalEventId, String renderSha256, String metadataSha256,
                                 int contentVersion, String fileName) {}
+
+    public record ProductionStartRequest(String productionProfileId, String idempotencyKey) {}
+    public record ProductionError(String code, String message, boolean retryable, String capability) {}
+    public record ProductionJob(String id, String contentId, String brandId, String productionProfileId,
+                               String workflowId, String workflowVersion, String mode, String status, String stage,
+                               String idempotencyKey, Instant createdAt, Instant startedAt, Instant completedAt,
+                               List<Map<String, Object>> providerExecutions, Map<String, Object> researchPacket,
+                               Map<String, Object> script, Map<String, Object> narration,
+                               List<Map<String, Object>> visuals, Map<String, Object> usage,
+                               List<String> warnings, List<ProductionError> errors,
+                               String renderArtifactId, int retryCount, boolean cancellationSupported) {}
+    public record ProviderCapability(String capability, List<String> providers, Map<String, String> providerStatus) {}
+    public record ProviderCatalog(String defaultMode, boolean realProvidersEnabled,
+                                 List<ProviderCapability> capabilities) {}
 }

@@ -3,6 +3,7 @@ import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { approvalReminder, splitCommaList } from './domain';
 import ReviewWorkspace from './ReviewWorkspace';
+import ProductionWorkspace from './ProductionWorkspace';
 
 describe('dynamic dashboard configuration', () => {
   it('parses user-defined categories and content pillars without a fixed taxonomy', () => {
@@ -25,5 +26,17 @@ describe('dynamic dashboard configuration', () => {
     expect(html).toContain('User category');
     expect(html).toContain('Select content to review');
     expect(html).toContain('All statuses');
+  });
+
+  it('labels Stage 4 as local synthetic production and keeps formats user defined', () => {
+    const html = renderToStaticMarkup(createElement(ProductionWorkspace, {
+      brands: [{ id: 'brand-1', name: 'Test brand' }],
+      profiles: [{ id: 'profile-1', brandId: 'brand-1', name: 'Podcast clips', categoryId: null, contentFormat: 'podcast clip', settings: {} }],
+      content: [], onContentUpdated: async () => undefined,
+    }));
+    expect(html).toContain('Production workspace');
+    expect(html).toContain('Mock output is synthetic');
+    expect(html).toContain('without live web research');
+    expect(html).toContain('synthetic test assets');
   });
 });

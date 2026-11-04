@@ -44,6 +44,9 @@ class MediaOsServiceTest {
                 "vertical gameplay", List.of("capture", "edit", "review"), Map.of("aspectRatio", "9:16")));
         ProductionProfile audio = service.createProfile(new ProductionProfileRequest(brand.id(), "Music visualizer", null,
                 "audio visualizer", List.of("rights-check", "visualize", "review"), Map.of("audioRequired", "true")));
+        assertThrows(IllegalArgumentException.class, () -> service.createProfile(new ProductionProfileRequest(brand.id(),
+                "Unsafe provider profile", null, "vertical gameplay", List.of(),
+                Map.of("mediaos.workflow_json", "{\"api_key\":\"must-not-be-stored\"}"))));
 
         assertEquals(2, service.listChannels(brand.id()).size());
         assertEquals(List.of(channelA.id(), channelB.id()), service.listChannels(brand.id()).stream().map(Channel::id).toList());

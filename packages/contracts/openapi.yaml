@@ -106,6 +106,56 @@ paths:
       responses:
         '200': { description: Transitioned content item }
         '400': { description: Invalid transition }
+  /api/v1/providers:
+    get:
+      summary: List configured capabilities and available provider names without credential values
+      responses:
+        '200': { description: Provider capability catalog, content: { application/json: { schema: { $ref: '#/components/schemas/ProviderCatalog' } } } }
+  /api/v1/content-items/{id}/production-jobs:
+    post:
+      summary: Start an idempotent local production job; successful renders enter human review and are never auto-approved
+      parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductionStartRequest' }
+      responses:
+        '200': { description: Production job accepted, content: { application/json: { schema: { $ref: '#/components/schemas/ProductionJob' } } } }
+        '400': { description: Invalid workflow or unsupported capability selection }
+        '409': { description: Duplicate active job or ineligible content state }
+  /api/v1/production-jobs:
+    get:
+      summary: List persisted local production jobs
+      parameters: [{ name: contentId, in: query, required: false, schema: { type: string } }]
+      responses:
+        '200': { description: Production jobs }
+  /api/v1/production-jobs/{id}:
+    get:
+      summary: Retrieve production job status and generated draft results
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { description: Production job, content: { application/json: { schema: { $ref: '#/components/schemas/ProductionJob' } } } }
+    delete:
+      summary: Request cancellation of an active local production job
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { description: Cancellation requested }
+        '409': { description: Job is no longer active }
+  /api/v1/production-jobs/{id}/assets/{assetId}:
+    get:
+      summary: Stream a generated job visual identified by generated asset ID
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: assetId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: PNG visual asset }
+  /api/v1/production-jobs/{id}/audio:
+    get:
+      summary: Stream a generated synthetic or provider narration asset
+      parameters: [{ name: id, in: path, required: true, schema: { type: string, format: uuid } }]
+      responses:
+        '200': { description: Narration audio asset }
   /api/v1/reviews/queue:
     get:
       summary: List review queue items with optional brand, category, format, and review-status filters
@@ -417,3 +467,52 @@ components:
         metadataSha256: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
         contentVersion: { type: integer }
         fileName: { type: string }
+    ProductionStartRequest:
+      type: object
+      required: [productionProfileId, idempotencyKey]
+      properties:
+        productionProfileId: { type: string }
+        idempotencyKey: { type: string, minLength: 1, maxLength: 128 }
+    ProductionJob:
+      type: object
+      required: [id, contentId, brandId, productionProfileId, workflowId, workflowVersion, mode, status, stage, idempotencyKey, createdAt, providerExecutions, usage, warnings, errors]
+      properties:
+        id: { type: string, format: uuid }
+        contentId: { type: string }
+        brandId: { type: string }
+        productionProfileId: { type: string }
+        workflowId: { type: string }
+        workflowVersion: { type: string }
+        mode: { type: string, enum: [MOCK, REAL] }
+        status: { type: string, enum: [QUEUED, RUNNING, RESEARCHING, SCRIPTING, GENERATING_AUDIO, GENERATING_VISUALS, RENDERING, QA_PENDING, CANCELLING, READY_FOR_REVIEW, FAILED, CANCELLED, UNSUPPORTED_RENDERER] }
+        stage: { type: string }
+        idempotencyKey: { type: string }
+        createdAt: { type: string, format: date-time }
+        startedAt: { type: [string, 'null'], format: date-time }
+        completedAt: { type: [string, 'null'], format: date-time }
+        providerExecutions: { type: array, items: { type: object } }
+        researchPacket: { type: object }
+        script: { type: object }
+        narration: { type: object }
+        visuals: { type: array, items: { type: object } }
+        usage: { type: object }
+        warnings: { type: array, items: { type: string } }
+        errors: { type: array, items: { type: object } }
+        renderArtifactId: { type: [string, 'null'], format: uuid }
+        retryCount: { type: integer }
+        cancellationSupported: { type: boolean }
+    ProviderCatalog:
+      type: object
+      required: [defaultMode, realProvidersEnabled, capabilities]
+      properties:
+        defaultMode: { type: string, enum: [MOCK] }
+        realProvidersEnabled: { type: boolean }
+        capabilities:
+          type: array
+          items:
+            type: object
+            required: [capability, providers]
+            properties:
+              capability: { type: string, enum: [research, script, text_to_speech, visual_asset] }
+              providers: { type: array, items: { type: string } }
+              providerStatus: { type: object, additionalProperties: { type: string }, description: Local configuration state only; not a remote health check }

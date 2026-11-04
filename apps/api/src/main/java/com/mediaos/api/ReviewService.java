@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.io.IOException;
+import java.io.File;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -159,6 +160,30 @@ public class ReviewService {
         }
     }
 
+    /** Internal local-worker handoff; paths come only from the generated job directory. */
+    public RenderArtifact registerRenderFiles(String contentId, Path video, Path manifest, Path qaReport) {
+        return registerRender(contentId, new LocalFileUpload("video", video, "video/mp4"),
+                new LocalFileUpload("manifest", manifest, "application/json"),
+                new LocalFileUpload("qaReport", qaReport, "application/json"));
+    }
+
+    private static final class LocalFileUpload implements MultipartFile {
+        private final String partName;
+        private final Path file;
+        private final String contentType;
+        private LocalFileUpload(String partName, Path file, String contentType) {
+            this.partName = partName; this.file = file; this.contentType = contentType;
+        }
+        @Override public String getName() { return partName; }
+        @Override public String getOriginalFilename() { return file.getFileName().toString(); }
+        @Override public String getContentType() { return contentType; }
+        @Override public boolean isEmpty() { try { return !Files.isRegularFile(file) || Files.size(file) == 0; } catch (IOException ignored) { return true; } }
+        @Override public long getSize() { try { return Files.size(file); } catch (IOException ignored) { return 0; } }
+        @Override public byte[] getBytes() throws IOException { return Files.readAllBytes(file); }
+        @Override public InputStream getInputStream() throws IOException { return Files.newInputStream(file); }
+        @Override public void transferTo(File destination) throws IOException { Files.copy(file, destination.toPath(), StandardCopyOption.REPLACE_EXISTING); }
+    }
+
     public synchronized List<RenderArtifact> listArtifacts(String contentId) {
         contentService.getContent(contentId);
         return artifacts.values().stream().filter(item -> item.contentId().equals(contentId)).toList();
@@ -299,8 +324,19 @@ public class ReviewService {
 
     public synchronized ContentItem updateContent(String contentId, ContentItemRequest request) {
         synchronized (contentService) {
+            ContentItem existing = contentService.getContent(contentId);
+            if ("REJECTED".equals(existing.status()))
+                throw new ConflictException("rejected content must be explicitly resubmitted before editing");
             ContentItem updated = contentService.updateContent(contentId, request);
             invalidateCurrentApproval(contentId, "content metadata edited");
+            String activeArtifactId = currentArtifactByContent.remove(contentId);
+            if (activeArtifactId != null) {
+                RenderArtifact artifact = artifacts.get(activeArtifactId);
+                if (artifact != null) artifacts.put(activeArtifactId, withActive(artifact, false));
+                if (Set.of("IN_REVIEW", "APPROVED", "EXPORT_READY").contains(updated.status())) {
+                    updated = contentService.setReviewStatus(contentId, "ASSETS_READY");
+                }
+            }
             persistState();
             return updated;
         }

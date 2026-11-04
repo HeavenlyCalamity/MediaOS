@@ -46,13 +46,13 @@ docs/               Product, architecture, and implementation docs
 
 ## Getting started
 
-Stages 0–3 provide three independently runnable local components. The API stores its
+Stages 0–4 provide three independently runnable local components. The API stores its
 domain data, render registry, and review history as atomic JSON files under
 `%USERPROFILE%\\.mediaos` on Windows or `~/.mediaos` on Linux/macOS by default.
 Set `MEDIAOS_DATA_DIR` to choose another local app-data directory. This embedded
 single-process store is intended for local development; it is not a multi-process
 database or a tamper-proof audit store. No cloud account, credentials, or paid API
-keys are needed. See:
+keys are needed for mock production. See:
 - [AGENTS.md](AGENTS.md) — instructions for Codex and contributors.
 - [Product brief](docs/PRODUCT_BRIEF.md)
 - [Architecture](docs/ARCHITECTURE.md)
@@ -123,6 +123,24 @@ and metadata version.
 See [worker rendering setup and manifest reference](docs/RENDERING.md) for FFmpeg
 installation, synthetic fixture generation, render commands, and QA details.
 
+### Local AI production (Stage 4)
+
+The dashboard's **Production** workspace starts a local job from a content item
+and production profile. The default path uses mock research, script generation, a
+clearly labeled synthetic test tone (not speech), and locally generated synthetic
+visuals. Stage 2 renders the video; Stage 3 registers it as pending human review.
+No source URLs are fetched, no claims are asserted as fact-checked, and no approval
+or publishing occurs. Profile JSON and optional environment overrides are
+documented in [Provider configuration](docs/PROVIDERS.md).
+
+Optional OpenAI-compatible script generation is disabled by default. It requires
+`MEDIAOS_REAL_PROVIDERS_ENABLED=true`, an API-process environment variable named
+`MEDIAOS_OPENAI_COMPAT_API_KEY`, and a configured endpoint/model in the selected
+profile. Never put credentials in profile settings or browser requests. Costs are
+reported only when supplied by a provider or calculated from explicit configured
+pricing; otherwise cost is `null`. The local job store is development-only and is
+not an authenticated or tamper-proof audit system.
+
 ### Local review, approval, and export (Stage 3)
 
 Start the API and dashboard as above, then open **Review studio**. Select a content
@@ -136,7 +154,8 @@ from Git. Configure `MEDIAOS_MAX_VIDEO_BYTES` to change the 500 MiB MP4 limit an
 Approval and rejection are explicit backend actions. Approval captures an immutable
 snapshot and hashes of the render and canonical metadata; editing metadata or
 replacing the render invalidates that approval while preserving its event. Rejected
-items require explicit resubmission. Only a currently valid approval can download
+items require explicit resubmission. Content edits after a render also detach the
+old render and require a new render before review can resume. Only a currently valid approval can download
 the approved MP4 or a ZIP containing the video, metadata, source/rights records,
 Stage 2 manifest and QA report, and approval record. The current reviewer's name is
 self-attested because local authentication is not part of this stage. See
