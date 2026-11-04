@@ -219,6 +219,7 @@ public class MediaOsService {
     }
 
     public synchronized List<ProductionProfile> listProfiles() { return List.copyOf(profiles.values()); }
+    public synchronized ProductionProfile getProfile(String id) { return require(profiles, id, "production profile"); }
     public synchronized List<ProductionProfile> listBrandProfiles(String brandId) {
         require(brands, brandId, "brand");
         return profiles.values().stream().filter(x -> x.brandId() == null || x.brandId().equals(brandId)).toList();
@@ -233,7 +234,7 @@ public class MediaOsService {
         Instant now = Instant.now();
         ProductionProfile item = new ProductionProfile(id(), brandId, required(request.name(), "name"), categoryId,
                 required(request.contentFormat(), "contentFormat"), strings(request.workflowStages()),
-                stringMap(request.settings()), now, now);
+                profileSettings(request.settings()), now, now);
         profiles.put(item.id(), item);
         persistState();
         return item;
@@ -254,7 +255,7 @@ public class MediaOsService {
         }
         ProductionProfile item = new ProductionProfile(id, brandId, required(request.name(), "name"), categoryId,
                 required(request.contentFormat(), "contentFormat"), strings(request.workflowStages()),
-                stringMap(request.settings()), old.createdAt(), Instant.now());
+                profileSettings(request.settings()), old.createdAt(), Instant.now());
         profiles.put(id, item);
         persistState();
         return item;
@@ -406,6 +407,20 @@ public class MediaOsService {
             copy.put(key.trim(), value.trim());
         });
         return Collections.unmodifiableMap(copy);
+    }
+
+    private Map<String, String> profileSettings(Map<String, String> values) {
+        Map<String, String> settings = stringMap(values);
+        ProviderConfigSecurity.rejectSecretFields(settings);
+        String workflow = settings.get("mediaos.workflow_json");
+        if (workflow != null && !workflow.isBlank()) {
+            try {
+                ProviderConfigSecurity.rejectSecretFields(objectMapper.readValue(workflow, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}));
+            } catch (IOException error) {
+                throw new IllegalArgumentException("mediaos.workflow_json must contain a valid JSON object", error);
+            }
+        }
+        return settings;
     }
     private static Map<String, Map<String, String>> platformMetadata(Map<String, Map<String, String>> values) {
         if (values == null) return Map.of();

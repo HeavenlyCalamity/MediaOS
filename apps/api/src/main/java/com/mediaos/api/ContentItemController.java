@@ -17,9 +17,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class ContentItemController {
     private final MediaOsService service;
     private final ReviewService reviewService;
-    public ContentItemController(MediaOsService service, ReviewService reviewService) {
+    private final ProductionService productionService;
+    public ContentItemController(MediaOsService service, ReviewService reviewService, ProductionService productionService) {
         this.service = service;
         this.reviewService = reviewService;
+        this.productionService = productionService;
     }
 
     @GetMapping public List<ContentItem> list(@RequestParam(required = false) String brandId) { return service.listContent(brandId); }
@@ -30,5 +32,8 @@ public class ContentItemController {
     }
     @PostMapping("/{id}/transition") public ContentItem transition(@PathVariable String id, @RequestBody TransitionRequest request) {
         return service.transitionContent(id, request.status());
+    }
+    @PostMapping("/{id}/production-jobs") public ProductionJob startProduction(@PathVariable String id, @RequestBody ProductionStartRequest request) {
+        return productionService.start(id, request);
     }
 }

@@ -176,13 +176,16 @@ class ReviewApiTest {
                         .content(mapper.writeValueAsBytes(new ContentItemRequest(edited.brandId(), edited.categoryId(), edited.title(),
                                 edited.contentType(), edited.language(), edited.brief(), edited.productionProfileId(), edited.targetChannelIds(),
                                 edited.sourceRecords(), edited.assets(), edited.description(), edited.script(), edited.tags(), edited.platformMetadata()))))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("IN_REVIEW"));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("ASSETS_READY"));
         assertFalse(reviewService.currentApproval(content.id()).valid());
         assertTrue(reviewService.history(content.id()).getFirst().invalidated());
+        assertFalse(reviewService.getArtifact(artifact.id()).active(), "metadata edits detach the render created from old metadata");
         mockMvc.perform(get("/api/v1/content-items/{id}/export", content.id())).andExpect(status().isConflict());
 
+        RenderArtifact revised = register(videoBytes, manifest, qa);
+        assertEquals("IN_REVIEW", contentService.getContent(content.id()).status());
         ContentItem changed = contentService.getContent(content.id());
-        RejectionRequest rejection = new RejectionRequest("Owner", "Please revise the opening", changed.version(), artifact.id());
+        RejectionRequest rejection = new RejectionRequest("Owner", "Please revise the opening", changed.version(), revised.id());
         mockMvc.perform(post("/api/v1/content-items/{id}/reject", content.id()).contentType(MediaType.APPLICATION_JSON)
                         .content(mapper.writeValueAsBytes(rejection)))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.decision").value("REJECTED"));
@@ -195,11 +198,11 @@ class ReviewApiTest {
                         .content(mapper.writeValueAsBytes(new ResubmitRequest("Owner", "Updated script and resubmitting"))))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("IN_REVIEW"));
         ContentItem resubmitted = contentService.getContent(content.id());
-        ReviewEvent secondApproval = approve(resubmitted, artifact);
+        ReviewEvent secondApproval = approve(resubmitted, revised);
         assertTrue(reviewService.currentApproval(content.id()).valid());
 
         RenderArtifact replacement = register(videoBytes, manifest, qa);
-        assertNotEquals(artifact.id(), replacement.id());
+        assertNotEquals(revised.id(), replacement.id());
         assertFalse(reviewService.currentApproval(content.id()).valid());
         assertTrue(reviewService.history(content.id()).stream().anyMatch(event -> event.eventId().equals(secondApproval.eventId()) && event.invalidated()));
         mockMvc.perform(get("/api/v1/content-items/{id}/export/video", content.id())).andExpect(status().isConflict());

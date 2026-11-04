@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { approvalReminder, splitCommaList } from './domain';
 import ReviewWorkspace from './ReviewWorkspace';
+import ProductionWorkspace from './ProductionWorkspace';
 
 type Brand = { id: string; name: string; slug: string; description: string; defaultLanguage: string; tone: string; contentPillars: string[]; audienceProfile: Record<string, string> };
 type Category = { id: string; name: string; slug: string; description: string; parentCategoryId: string | null };
@@ -49,6 +50,7 @@ export default function App() {
   const [profileFormat, setProfileFormat] = useState('short-form video');
   const [profileStages, setProfileStages] = useState('brief, research, script, production, review');
   const [profileCategoryId, setProfileCategoryId] = useState('');
+  const [profileWorkflow, setProfileWorkflow] = useState('{\n  "workflow_id": "local-short-video",\n  "version": "1",\n  "mode": "MOCK",\n  "renderer": "shorts-vertical-v1",\n  "duration_seconds": 8,\n  "providers": { "research": "mock", "script": "mock", "text_to_speech": "mock", "visual_asset": "mock" },\n  "prompt_template_id": "default-script",\n  "prompt_version": "1"\n}');
 
   const [title, setTitle] = useState('');
   const [contentType, setContentType] = useState('short-form video');
@@ -119,6 +121,7 @@ export default function App() {
   function editProfile(profile: Profile) {
     setEditingProfileId(profile.id); setProfileName(profile.name); setProfileFormat(profile.contentFormat);
     setProfileCategoryId(profile.categoryId ?? ''); setProfileStages(profile.workflowStages.join(', '));
+    setProfileWorkflow(profile.settings['mediaos.workflow_json'] ?? '{}');
   }
 
   function editContent(item: ContentItem) {
@@ -140,7 +143,7 @@ export default function App() {
     <main className="app-shell">
       <header className="topbar">
         <a className="wordmark" href="#home"><span className="mark">M</span> MEDIA<span className="muted">OS</span></a>
-        <nav className="workspace-nav" aria-label="Workspace navigation"><a href="#review">Review studio</a><a href="#management">Configure</a></nav>
+        <nav className="workspace-nav" aria-label="Workspace navigation"><a href="#production">Production</a><a href="#review">Review studio</a><a href="#management">Configure</a></nav>
         <span className="stage">LOCAL WORKSPACE <i /></span>
       </header>
       <section className="intro">
@@ -153,6 +156,7 @@ export default function App() {
       {(error || notice) && <div className={error ? 'flash error' : 'flash success'} role="status">{error || notice}</div>}
 
       <ReviewWorkspace brands={brands} categories={categories} onContentUpdated={refresh} />
+      <ProductionWorkspace brands={brands} profiles={profiles} content={content} onContentUpdated={refresh} />
 
       <div id="management" className="management-grid">
         <section className="panel"><div className="panel-heading"><div><p className="eyebrow">CONFIGURATION</p><h2>Brands</h2></div><span className="badge">{brands.length}</span></div>
@@ -206,12 +210,16 @@ export default function App() {
         <section className="panel"><div className="panel-heading"><div><p className="eyebrow">WORKFLOW DESIGN</p><h2>Production profiles</h2></div><span className="badge">{profiles.length}</span></div>
           {!brandId ? <p className="muted-copy">Create or select a brand to configure workflows.</p> : <>
             <form onSubmit={(event) => { event.preventDefault(); void run(async () => {
-              await api(editingProfileId ? `/api/v1/production-profiles/${editingProfileId}` : '/api/v1/production-profiles', { method: editingProfileId ? 'PUT' : 'POST', body: JSON.stringify({ brandId, name: profileName, categoryId: profileCategoryId || null, contentFormat: profileFormat, workflowStages: splitCommaList(profileStages), settings: {} }) });
+              let workflow: unknown;
+              try { workflow = JSON.parse(profileWorkflow); } catch { throw new Error('Workflow configuration must be valid JSON.'); }
+              if (!workflow || typeof workflow !== 'object' || Array.isArray(workflow)) throw new Error('Workflow configuration must be a JSON object.');
+              await api(editingProfileId ? `/api/v1/production-profiles/${editingProfileId}` : '/api/v1/production-profiles', { method: editingProfileId ? 'PUT' : 'POST', body: JSON.stringify({ brandId, name: profileName, categoryId: profileCategoryId || null, contentFormat: profileFormat, workflowStages: splitCommaList(profileStages), settings: { 'mediaos.workflow_json': JSON.stringify(workflow) } }) });
               setEditingProfileId(''); setProfileName('');
             }, editingProfileId ? 'Production profile updated.' : 'Production profile created.'); }}>
               <Field label="Profile name" value={profileName} onChange={setProfileName} required />
               <div className="form-row"><Field label="Content format" value={profileFormat} onChange={setProfileFormat} required /><SelectField label="Category (optional)" value={profileCategoryId} onChange={setProfileCategoryId} options={categories.map((c) => [c.id, c.name] as [string, string])} /></div>
               <Field label="Workflow stages (comma separated)" value={profileStages} onChange={setProfileStages} />
+              <label className="field"><span>Stage 4 workflow JSON</span><textarea rows={9} value={profileWorkflow} onChange={(event) => setProfileWorkflow(event.target.value)} spellCheck={false} /></label>
               <div className="form-actions"><button className="primary" type="submit">{editingProfileId ? 'Save profile' : 'Add profile'}</button>{editingProfileId && <button type="button" className="secondary" onClick={() => setEditingProfileId('')}>Cancel edit</button>}</div>
             </form>
             <ul className="record-list">{profiles.map((profile) => <li key={profile.id}><div><strong>{profile.name}</strong><small>{profile.contentFormat}{profile.categoryId ? ` · ${categories.find((item) => item.id === profile.categoryId)?.name ?? 'Category'}` : ' · General'} · {profile.workflowStages.join(' → ')}</small></div><button className="text-button" onClick={() => editProfile(profile)}>Edit</button></li>)}</ul>
