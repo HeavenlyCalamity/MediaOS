@@ -45,9 +45,12 @@ jobs:
         working-directory: workers/shorts-worker
     steps:
       - uses: actions/checkout@v4
+      - name: Install FFmpeg for renderer integration test
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
       - run: python -m pip install --no-deps -e .
+      - run: python fixtures/generate_fixtures.py
       - run: python -m unittest discover -s tests -v
       - run: mediaos-worker demo --brand-id cosmic-curiosity --brief "Deterministic CI demonstration"
