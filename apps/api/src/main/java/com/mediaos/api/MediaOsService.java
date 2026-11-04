@@ -2,6 +2,12 @@ package com.mediaos.api;
 
 import static com.mediaos.api.Models.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.io.IOException;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -10,16 +16,73 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-/** Local in-memory repository and domain validation for the Stage 1 workflow. */
+/** Local domain repository. Runtime state is atomically persisted to the configured app-data directory. */
 @Service
 public class MediaOsService {
+    private final ObjectMapper objectMapper;
+    private final Path stateFile;
     private final Map<String, Brand> brands = new LinkedHashMap<>();
     private final Map<String, Category> categories = new LinkedHashMap<>();
     private final Map<String, Channel> channels = new LinkedHashMap<>();
     private final Map<String, ProductionProfile> profiles = new LinkedHashMap<>();
     private final Map<String, ContentItem> contentItems = new LinkedHashMap<>();
+
+    private record PersistentState(Map<String, Brand> brands, Map<String, Category> categories,
+                                   Map<String, Channel> channels, Map<String, ProductionProfile> profiles,
+                                   Map<String, ContentItem> contentItems) {}
+
+    /** Direct constructor keeps pure domain tests isolated and in-memory. */
+    public MediaOsService() {
+        this(new ObjectMapper(), (Path) null);
+    }
+
+    @Autowired
+    public MediaOsService(ObjectMapper objectMapper,
+                          @Value("${mediaos.data-dir:${user.home}/.mediaos}") String dataDirectory) {
+        this(objectMapper, Path.of(dataDirectory).resolve("api-state.json"));
+        loadState();
+    }
+
+    private MediaOsService(ObjectMapper objectMapper, Path stateFile) {
+        this.objectMapper = objectMapper;
+        this.stateFile = stateFile;
+    }
+
+    private void loadState() {
+        if (!Files.exists(stateFile)) return;
+        try {
+            PersistentState state = objectMapper.readValue(stateFile.toFile(), PersistentState.class);
+            if (state.brands() != null) brands.putAll(state.brands());
+            if (state.categories() != null) categories.putAll(state.categories());
+            if (state.channels() != null) channels.putAll(state.channels());
+            if (state.profiles() != null) profiles.putAll(state.profiles());
+            if (state.contentItems() != null) contentItems.putAll(state.contentItems());
+        } catch (IOException error) {
+            throw new IllegalStateException("Could not load local Media OS state from " + stateFile, error);
+        }
+    }
+
+    private void persistState() {
+        if (stateFile == null) return;
+        Path temporary = stateFile.resolveSibling(stateFile.getFileName() + ".tmp");
+        try {
+            Files.createDirectories(stateFile.getParent());
+            PersistentState state = new PersistentState(brands, categories, channels, profiles, contentItems);
+            objectMapper.writeValue(temporary.toFile(), state);
+            try {
+                Files.move(temporary, stateFile, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException error) {
+                Files.move(temporary, stateFile, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } catch (IOException error) {
+            try { Files.deleteIfExists(temporary); } catch (IOException ignored) { }
+            throw new IllegalStateException("Could not persist local Media OS state to " + stateFile, error);
+        }
+    }
     private static final Set<String> CONTENT_STATES = Set.of(
             "IDEA", "RESEARCHING", "RESEARCH_READY", "SCRIPT_READY", "ASSETS_READY",
             "RENDERING", "QA_PENDING", "IN_REVIEW", "APPROVED", "EXPORT_READY",
@@ -32,7 +95,7 @@ public class MediaOsService {
             Map.entry("ASSETS_READY", Set.of("RENDERING", "FAILED", "CANCELLED")),
             Map.entry("RENDERING", Set.of("QA_PENDING", "FAILED", "CANCELLED")),
             Map.entry("QA_PENDING", Set.of("IN_REVIEW", "FAILED", "CANCELLED")),
-            Map.entry("IN_REVIEW", Set.of("REJECTED", "FAILED", "CANCELLED")));
+            Map.entry("IN_REVIEW", Set.of("FAILED", "CANCELLED")));
 
     public synchronized List<Brand> listBrands() { return List.copyOf(brands.values()); }
     public synchronized Brand getBrand(String id) { return require(brands, id, "brand"); }
@@ -46,6 +109,7 @@ public class MediaOsService {
                 defaultValue(request.defaultLanguage(), "und"), clean(request.tone()),
                 strings(request.contentPillars()), stringMap(request.audienceProfile()), true, now, now);
         brands.put(item.id(), item);
+        persistState();
         return item;
     }
 
@@ -58,6 +122,7 @@ public class MediaOsService {
                 defaultValue(request.defaultLanguage(), "und"), clean(request.tone()),
                 strings(request.contentPillars()), stringMap(request.audienceProfile()), old.enabled(), old.createdAt(), Instant.now());
         brands.put(id, item);
+        persistState();
         return item;
     }
 
@@ -68,6 +133,7 @@ public class MediaOsService {
                 || contentItems.values().stream().anyMatch(x -> id.equals(x.brandId()));
         if (used) throw new ConflictException("brand is referenced by a channel, production profile, or content item");
         brands.remove(brand.id());
+        persistState();
     }
 
     public synchronized List<Category> listCategories() { return List.copyOf(categories.values()); }
@@ -82,6 +148,7 @@ public class MediaOsService {
         Instant now = Instant.now();
         Category item = new Category(id(), required(request.name(), "name"), slug, clean(request.description()), parent, now, now);
         categories.put(item.id(), item);
+        persistState();
         return item;
     }
 
@@ -97,6 +164,7 @@ public class MediaOsService {
         }
         Category item = new Category(id, required(request.name(), "name"), slug, clean(request.description()), parent, old.createdAt(), Instant.now());
         categories.put(id, item);
+        persistState();
         return item;
     }
 
@@ -107,6 +175,7 @@ public class MediaOsService {
                 || contentItems.values().stream().anyMatch(x -> id.equals(x.categoryId()));
         if (used) throw new ConflictException("category is referenced by a child category, production profile, or content item");
         categories.remove(category.id());
+        persistState();
     }
 
     public synchronized List<Channel> listChannels(String brandId) {
@@ -123,6 +192,7 @@ public class MediaOsService {
                 required(request.displayName(), "displayName"), clean(request.accountReference()),
                 defaultValue(request.status(), "NOT_CONNECTED"), now, now);
         channels.put(item.id(), item);
+        persistState();
         return item;
     }
 
@@ -136,6 +206,7 @@ public class MediaOsService {
         Channel item = new Channel(id, brandId, required(request.platform(), "platform"), required(request.displayName(), "displayName"),
                 clean(request.accountReference()), defaultValue(request.status(), old.status()), old.createdAt(), Instant.now());
         channels.put(id, item);
+        persistState();
         return item;
     }
 
@@ -144,6 +215,7 @@ public class MediaOsService {
         if (contentItems.values().stream().anyMatch(x -> x.targetChannelIds().contains(id)))
             throw new ConflictException("channel is referenced by a content item");
         channels.remove(channel.id());
+        persistState();
     }
 
     public synchronized List<ProductionProfile> listProfiles() { return List.copyOf(profiles.values()); }
@@ -163,6 +235,7 @@ public class MediaOsService {
                 required(request.contentFormat(), "contentFormat"), strings(request.workflowStages()),
                 stringMap(request.settings()), now, now);
         profiles.put(item.id(), item);
+        persistState();
         return item;
     }
 
@@ -183,6 +256,7 @@ public class MediaOsService {
                 required(request.contentFormat(), "contentFormat"), strings(request.workflowStages()),
                 stringMap(request.settings()), old.createdAt(), Instant.now());
         profiles.put(id, item);
+        persistState();
         return item;
     }
 
@@ -191,6 +265,7 @@ public class MediaOsService {
         if (contentItems.values().stream().anyMatch(x -> id.equals(x.productionProfileId())))
             throw new ConflictException("production profile is referenced by a content item");
         profiles.remove(profile.id());
+        persistState();
     }
 
     public synchronized List<ContentItem> listContent(String brandId) {
@@ -206,8 +281,10 @@ public class MediaOsService {
         ContentItem item = new ContentItem(id(), required(request.brandId(), "brandId"), optional(request.categoryId()), required(request.title(), "title"),
                 required(request.contentType(), "contentType"), defaultValue(request.language(), "und"), clean(request.brief()),
                 optional(request.productionProfileId()), strings(request.targetChannelIds()), sources(request.sourceRecords()),
-                assets(request.assets()), "IDEA", 1, now, now);
+                assets(request.assets()), clean(request.description()), clean(request.script()), strings(request.tags()),
+                platformMetadata(request.platformMetadata()), "IDEA", 1, now, now);
         contentItems.put(item.id(), item);
+        persistState();
         return item;
     }
 
@@ -218,8 +295,14 @@ public class MediaOsService {
         ContentItem item = new ContentItem(id, required(request.brandId(), "brandId"), optional(request.categoryId()), required(request.title(), "title"),
                 required(request.contentType(), "contentType"), defaultValue(request.language(), "und"), clean(request.brief()),
                 optional(request.productionProfileId()), strings(request.targetChannelIds()), sources(request.sourceRecords()),
-                assets(request.assets()), old.status(), old.version() + 1, old.createdAt(), Instant.now());
+                assets(request.assets()), request.description() == null ? old.description() : clean(request.description()),
+                request.script() == null ? old.script() : clean(request.script()),
+                request.tags() == null ? old.tags() : strings(request.tags()),
+                request.platformMetadata() == null ? old.platformMetadata() : platformMetadata(request.platformMetadata()),
+                "APPROVED".equals(old.status()) ? "IN_REVIEW" : old.status(),
+                old.version() + 1, old.createdAt(), Instant.now());
         contentItems.put(id, item);
+        persistState();
         return item;
     }
 
@@ -229,11 +312,37 @@ public class MediaOsService {
         validate(CONTENT_STATES.contains(state), "unknown content status: " + state);
         if (!TRANSITIONS.getOrDefault(old.status(), Set.of()).contains(state))
             throw new IllegalArgumentException("invalid content transition: " + old.status() + " -> " + state);
+        if (Set.of("APPROVED", "EXPORT_READY", "REJECTED").contains(state))
+            throw new IllegalArgumentException(state + " can only be set through the explicit review workflow");
         ContentItem item = new ContentItem(old.id(), old.brandId(), old.categoryId(), old.title(), old.contentType(), old.language(),
-                old.brief(), old.productionProfileId(), old.targetChannelIds(), old.sourceRecords(), old.assets(), state,
-                old.version() + 1, old.createdAt(), Instant.now());
+                old.brief(), old.productionProfileId(), old.targetChannelIds(), old.sourceRecords(), old.assets(),
+                old.description(), old.script(), old.tags(), old.platformMetadata(), state, old.version() + 1, old.createdAt(), Instant.now());
         contentItems.put(id, item);
+        persistState();
         return item;
+    }
+
+    synchronized ContentItem setReviewStatus(String id, String status) {
+        ContentItem old = require(contentItems, id, "content item");
+        ContentItem item = withStatus(old, status, old.version());
+        contentItems.put(id, item);
+        persistState();
+        return item;
+    }
+
+    synchronized ContentItem resubmitContent(String id) {
+        ContentItem old = require(contentItems, id, "content item");
+        validate("REJECTED".equals(old.status()), "only rejected content can be resubmitted");
+        ContentItem item = withStatus(old, "IN_REVIEW", old.version() + 1);
+        contentItems.put(id, item);
+        persistState();
+        return item;
+    }
+
+    private static ContentItem withStatus(ContentItem old, String status, int version) {
+        return new ContentItem(old.id(), old.brandId(), old.categoryId(), old.title(), old.contentType(), old.language(),
+                old.brief(), old.productionProfileId(), old.targetChannelIds(), old.sourceRecords(), old.assets(),
+                old.description(), old.script(), old.tags(), old.platformMetadata(), status, version, old.createdAt(), Instant.now());
     }
 
     private void validateContentReferences(ContentItemRequest request) {
@@ -295,6 +404,15 @@ public class MediaOsService {
         values.forEach((key, value) -> {
             if (key == null || key.isBlank() || value == null) throw new IllegalArgumentException("profile and audience settings require non-empty keys and values");
             copy.put(key.trim(), value.trim());
+        });
+        return Collections.unmodifiableMap(copy);
+    }
+    private static Map<String, Map<String, String>> platformMetadata(Map<String, Map<String, String>> values) {
+        if (values == null) return Map.of();
+        Map<String, Map<String, String>> copy = new LinkedHashMap<>();
+        values.forEach((platform, metadata) -> {
+            if (platform == null || platform.isBlank()) throw new IllegalArgumentException("platform metadata keys must not be empty");
+            copy.put(platform.trim(), stringMap(metadata));
         });
         return Collections.unmodifiableMap(copy);
     }

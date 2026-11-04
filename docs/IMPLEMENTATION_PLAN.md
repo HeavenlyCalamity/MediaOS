@@ -72,6 +72,12 @@ Acceptance:
 - Rejected content cannot be exported as approved.
 - Approval/rejection is logged and visible.
 
+**Status (2026-11-04):** Implemented as a local dashboard review studio and Spring
+API workflow. The API validates imported Stage 2 manifest/QA/MP4 artifacts, provides
+preview and approved downloads, and persists content plus review history in a local
+app-data JSON store. It survives restarts but is single-process and is not a
+tamper-proof or multi-user audit database. No cloud services or paid APIs are used.
+
 ## Stage 4 — Research and generation providers
 Goal: add configurable providers without coupling core workflow to one vendor.
 

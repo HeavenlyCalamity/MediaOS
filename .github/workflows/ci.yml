@@ -36,6 +36,8 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
+      - name: Install FFmpeg for synthetic review API integration tests
+        run: sudo apt-get update && sudo apt-get install --yes ffmpeg
       - run: mvn --batch-mode verify
 
   shorts-worker:

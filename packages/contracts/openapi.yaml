@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: Media OS API
-  version: 0.2.0
-  description: Niche-agnostic local Stage 1 API. All taxonomies and formats are user-defined.
+  version: 0.3.0
+  description: Niche-agnostic local API for content setup, render review, human approval and approved export. Formats remain user-defined.
 servers:
   - url: http://localhost:8080
 paths:
@@ -81,6 +81,11 @@ paths:
         '200': { description: Content item list }
     post:
       summary: Create content with sources, rights records, and platform targets
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ContentItemRequest' }
       responses:
         '200': { description: Content item in IDEA state }
   /api/v1/content-items/{id}:
@@ -96,8 +101,319 @@ paths:
         '200': { description: Updated content item }
   /api/v1/content-items/{id}/transition:
     post:
-      summary: Request a validated content lifecycle transition
+      summary: Request a validated content lifecycle transition; cannot approve, reject, or export content
       parameters: [{ name: id, in: path, required: true, schema: { type: string } }]
       responses:
         '200': { description: Transitioned content item }
         '400': { description: Invalid transition }
+  /api/v1/reviews/queue:
+    get:
+      summary: List review queue items with optional brand, category, format, and review-status filters
+      parameters:
+        - { name: brandId, in: query, schema: { type: string } }
+        - { name: categoryId, in: query, schema: { type: string } }
+        - { name: contentFormat, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [PENDING, APPROVED, REJECTED, INVALIDATED, NOT_READY] } }
+      responses:
+        '200': { description: Review queue, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ReviewSummary' } } } } }
+  /api/v1/content-items/{contentId}/render-artifacts:
+    post:
+      summary: Register a render only after manifest, QA, checksum, and FFprobe validation
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [video, manifest, qaReport]
+              properties:
+                video: { type: string, format: binary, description: MP4 file up to the configured upload limit }
+                manifest: { type: string, format: binary, description: Stage 2 manifest JSON }
+                qaReport: { type: string, format: binary, description: Stage 2 QA report JSON }
+      responses:
+        '200': { description: Validated render artifact, content: { application/json: { schema: { $ref: '#/components/schemas/RenderArtifact' } } } }
+        '400': { description: Invalid file, manifest, QA report, identity, or checksum }
+        '404': { description: Content item not found }
+        '413': { description: Upload exceeds configured limit }
+    get:
+      summary: List current and historical renders for a content item
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Render artifact list }
+  /api/v1/content-items/{contentId}/review:
+    get:
+      summary: Get review status, active render, and current approval validity
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Review summary, content: { application/json: { schema: { $ref: '#/components/schemas/ReviewSummary' } } } }
+  /api/v1/content-items/{contentId}/review-history:
+    get:
+      summary: Get append-only approval and rejection history, including invalidation records
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Review history, content: { application/json: { schema: { type: array, items: { $ref: '#/components/schemas/ReviewEvent' } } } } }
+  /api/v1/content-items/{contentId}/approval:
+    get:
+      summary: Check whether the latest approval still matches the content version, metadata, and render
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Current approval validity, content: { application/json: { schema: { $ref: '#/components/schemas/CurrentApproval' } } } }
+  /api/v1/content-items/{contentId}/approve:
+    post:
+      summary: Explicitly approve a specific content version and render artifact
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reviewerIdentity, expectedContentVersion, expectedArtifactId]
+              properties:
+                reviewerIdentity: { type: string }
+                note: { type: string }
+                expectedContentVersion: { type: integer }
+                expectedArtifactId: { type: string }
+      responses:
+        '200': { description: Approval event with immutable snapshot and checksums, content: { application/json: { schema: { $ref: '#/components/schemas/ReviewEvent' } } } }
+        '400': { description: Content metadata is incomplete or content is not reviewable }
+        '409': { description: Content version or render changed during review }
+  /api/v1/content-items/{contentId}/reject:
+    post:
+      summary: Explicitly reject a specific content version and render with a required reason
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reviewerIdentity, reason, expectedContentVersion, expectedArtifactId]
+              properties:
+                reviewerIdentity: { type: string }
+                reason: { type: string }
+                expectedContentVersion: { type: integer }
+                expectedArtifactId: { type: string }
+      responses:
+        '200': { description: Rejection event, content: { application/json: { schema: { $ref: '#/components/schemas/ReviewEvent' } } } }
+        '400': { description: Rejection reason is missing or content is not reviewable }
+  /api/v1/content-items/{contentId}/resubmit:
+    post:
+      summary: Explicitly return rejected content to review as a new version
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reviewerIdentity, note]
+              properties:
+                reviewerIdentity: { type: string }
+                note: { type: string }
+      responses:
+        '200': { description: Resubmitted content in IN_REVIEW }
+        '400': { description: Content is not rejected or note is missing }
+  /api/v1/render-artifacts/{artifactId}:
+    get:
+      summary: Retrieve render metadata without exposing a filesystem path
+      parameters:
+        - { name: artifactId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200': { description: Render artifact metadata }
+        '404': { description: Artifact not found }
+  /api/v1/render-artifacts/{artifactId}/video:
+    get:
+      summary: Stream a render preview; supports HTTP byte ranges
+      parameters:
+        - { name: artifactId, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: Range, in: header, schema: { type: string }, description: Optional byte range }
+      responses:
+        '200': { description: MP4 preview, content: { video/mp4: { schema: { type: string, format: binary } } } }
+        '206': { description: Partial MP4 preview for a byte range }
+  /api/v1/content-items/{contentId}/export:
+    get:
+      summary: Download approved ZIP export; returns 409 when approval is absent or invalidated
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Approved export ZIP, content: { application/zip: { schema: { type: string, format: binary } } } }
+        '409': { description: No currently valid approval }
+  /api/v1/content-items/{contentId}/export/video:
+    get:
+      summary: Download the exact MP4 attached to the current valid approval
+      parameters:
+        - { name: contentId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Approved MP4, content: { video/mp4: { schema: { type: string, format: binary } } } }
+        '409': { description: No currently valid approval }
+
+components:
+  schemas:
+    ContentItemRequest:
+      type: object
+      required: [brandId, title, contentType, language]
+      properties:
+        brandId: { type: string }
+        categoryId: { type: [string, 'null'] }
+        title: { type: string }
+        contentType: { type: string, description: User-defined content format }
+        language: { type: string }
+        brief: { type: string }
+        description: { type: string }
+        script: { type: string }
+        tags: { type: array, items: { type: string } }
+        productionProfileId: { type: [string, 'null'] }
+        targetChannelIds: { type: array, items: { type: string } }
+        platformMetadata: { type: object, additionalProperties: { type: object, additionalProperties: { type: string } } }
+        sourceRecords: { type: array, items: { $ref: '#/components/schemas/SourceRecord' } }
+        assets: { type: array, items: { $ref: '#/components/schemas/AssetRights' } }
+    SourceRecord:
+      type: object
+      required: [title, url]
+      properties:
+        title: { type: string }
+        url: { type: string, format: uri }
+        publisher: { type: string }
+        accessedAt: { type: string }
+    AssetRights:
+      type: object
+      required: [kind, owner, licenseType, permittedUses]
+      properties:
+        kind: { type: string }
+        uri: { type: string }
+        mimeType: { type: string }
+        owner: { type: string }
+        licenseType: { type: string }
+        licenseEvidence: { type: string }
+        attribution: { type: string }
+        permittedUses: { type: array, items: { type: string } }
+    RenderArtifact:
+      type: object
+      required: [id, contentId, brandId, sha256, uploadedAt, manifestSchemaVersion, productionProfile, outputMetadata, checks, active]
+      properties:
+        id: { type: string, format: uuid }
+        contentId: { type: string }
+        brandId: { type: string }
+        originalFileName: { type: string }
+        sha256: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+        uploadedAt: { type: string, format: date-time }
+        manifestSchemaVersion: { type: string }
+        productionProfile: { type: string }
+        outputMetadata: { type: object, additionalProperties: true }
+        checks: { type: object, additionalProperties: { type: boolean } }
+        assetProvenance: { type: array, items: { type: object, description: Manifest asset IDs, source references, and rights validated against QA provenance; local file paths are omitted } }
+        subtitle: { type: object, description: Sanitized subtitle filename, burn-in status, and settings }
+        warnings: { type: array, items: { type: string } }
+        active: { type: boolean }
+    ApprovalRequest:
+      type: object
+      required: [reviewerIdentity, expectedContentVersion, expectedArtifactId]
+      properties:
+        reviewerIdentity: { type: string, minLength: 1 }
+        note: { type: string }
+        expectedContentVersion: { type: integer, minimum: 1 }
+        expectedArtifactId: { type: string, format: uuid }
+    RejectionRequest:
+      type: object
+      required: [reviewerIdentity, reason, expectedContentVersion, expectedArtifactId]
+      properties:
+        reviewerIdentity: { type: string, minLength: 1 }
+        reason: { type: string, minLength: 1 }
+        expectedContentVersion: { type: integer, minimum: 1 }
+        expectedArtifactId: { type: string, format: uuid }
+    ApprovalSnapshot:
+      type: object
+      required: [contentId, brandId, contentVersion, metadataSha256, renderArtifactId, renderSha256, content, destinations, capturedAt]
+      properties:
+        contentId: { type: string }
+        brandId: { type: string }
+        categoryId: { type: [string, 'null'] }
+        brandName: { type: string }
+        categoryName: { type: [string, 'null'] }
+        contentVersion: { type: integer }
+        metadataSha256: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+        renderArtifactId: { type: string, format: uuid }
+        renderSha256: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+        content: { type: object, description: Exact content record reviewed }
+        destinations: { type: array, items: { type: object } }
+        capturedAt: { type: string, format: date-time }
+    ReviewEvent:
+      type: object
+      required: [eventId, contentId, reviewerIdentity, decision, createdAt, contentVersion, renderArtifactId, renderSha256, metadataSha256, snapshot, invalidated]
+      properties:
+        eventId: { type: string, format: uuid }
+        contentId: { type: string }
+        reviewerIdentity: { type: string }
+        decision: { type: string, enum: [APPROVED, REJECTED, RESUBMITTED] }
+        note: { type: string }
+        createdAt: { type: string, format: date-time }
+        contentVersion: { type: integer }
+        renderArtifactId: { type: string, format: uuid }
+        renderSha256: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+        metadataSha256: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+        snapshot: { $ref: '#/components/schemas/ApprovalSnapshot' }
+        invalidated: { type: boolean }
+        invalidatedAt: { type: [string, 'null'], format: date-time }
+        invalidationReason: { type: [string, 'null'] }
+    CurrentApproval:
+      type: object
+      required: [valid]
+      properties:
+        valid: { type: boolean }
+        event: { oneOf: [{ $ref: '#/components/schemas/ReviewEvent' }, { type: 'null' }] }
+        reason: { type: [string, 'null'] }
+    ReviewSummary:
+      type: object
+      required: [content, brandName, reviewStatus, approval]
+      properties:
+        content: { $ref: '#/components/schemas/ContentItem' }
+        brandName: { type: string }
+        categoryName: { type: [string, 'null'] }
+        reviewStatus: { type: string, enum: [PENDING, APPROVED, REJECTED, INVALIDATED, NOT_READY] }
+        artifact: { oneOf: [{ $ref: '#/components/schemas/RenderArtifact' }, { type: 'null' }] }
+        approval: { $ref: '#/components/schemas/CurrentApproval' }
+    ContentItem:
+      type: object
+      required: [id, brandId, title, contentType, language, sourceRecords, assets, description, script, tags, platformMetadata, status, version]
+      properties:
+        id: { type: string }
+        brandId: { type: string }
+        categoryId: { type: [string, 'null'] }
+        title: { type: string }
+        contentType: { type: string, description: User-defined content format }
+        language: { type: string }
+        brief: { type: string }
+        description: { type: string }
+        script: { type: string }
+        tags: { type: array, items: { type: string } }
+        productionProfileId: { type: [string, 'null'] }
+        targetChannelIds: { type: array, items: { type: string } }
+        sourceRecords: { type: array, items: { $ref: '#/components/schemas/SourceRecord' } }
+        assets: { type: array, items: { $ref: '#/components/schemas/AssetRights' } }
+        platformMetadata: { type: object, additionalProperties: { type: object, additionalProperties: { type: string } } }
+        status: { type: string }
+        version: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ExportPackage:
+      type: object
+      required: [exportId, contentId, exportedAt, approvalEventId, renderSha256, metadataSha256, contentVersion, fileName]
+      properties:
+        exportId: { type: string, format: uuid }
+        contentId: { type: string }
+        exportedAt: { type: string, format: date-time }
+        approvalEventId: { type: string, format: uuid }
+        renderSha256: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+        metadataSha256: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+        contentVersion: { type: integer }
+        fileName: { type: string }

@@ -46,9 +46,13 @@ docs/               Product, architecture, and implementation docs
 
 ## Getting started
 
-Stage 2 provides three independently runnable local components. The API currently
-uses in-memory storage, so configuration resets when the API stops. No cloud account,
-credentials, or paid API keys are needed. See:
+Stages 0–3 provide three independently runnable local components. The API stores its
+domain data, render registry, and review history as atomic JSON files under
+`%USERPROFILE%\\.mediaos` on Windows or `~/.mediaos` on Linux/macOS by default.
+Set `MEDIAOS_DATA_DIR` to choose another local app-data directory. This embedded
+single-process store is intended for local development; it is not a multi-process
+database or a tamper-proof audit store. No cloud account, credentials, or paid API
+keys are needed. See:
 - [AGENTS.md](AGENTS.md) — instructions for Codex and contributors.
 - [Product brief](docs/PRODUCT_BRIEF.md)
 - [Architecture](docs/ARCHITECTURE.md)
@@ -119,13 +123,32 @@ and metadata version.
 See [worker rendering setup and manifest reference](docs/RENDERING.md) for FFmpeg
 installation, synthetic fixture generation, render commands, and QA details.
 
+### Local review, approval, and export (Stage 3)
+
+Start the API and dashboard as above, then open **Review studio**. Select a content
+item, attach its Stage 2 MP4, production manifest, and QA report, and review the
+video, QA, source links, and asset rights. Stage 3 validates the manifest and QA
+schema, IDs, actual video checksum, and actual FFprobe metadata before it stores an
+artifact. Uploads are stored below the configured data directory and are excluded
+from Git. Configure `MEDIAOS_MAX_VIDEO_BYTES` to change the 500 MiB MP4 limit and
+`MEDIAOS_FFPROBE` if FFprobe is not on `PATH`.
+
+Approval and rejection are explicit backend actions. Approval captures an immutable
+snapshot and hashes of the render and canonical metadata; editing metadata or
+replacing the render invalidates that approval while preserving its event. Rejected
+items require explicit resubmission. Only a currently valid approval can download
+the approved MP4 or a ZIP containing the video, metadata, source/rights records,
+Stage 2 manifest and QA report, and approval record. The current reviewer's name is
+self-attested because local authentication is not part of this stage. See
+[RENDERING.md](docs/RENDERING.md) and [the OpenAPI contract](packages/contracts/openapi.yaml).
+
 ### Local checks
 
 Run the component checks from their respective directories:
 
 ```text
 Dashboard: npm run lint; npm test -- --run; npm run build
-API:       mvn test
+API:       mvn test (FFmpeg must be installed for review API integration tests)
 Worker:    python -m unittest discover -s tests -v (FFmpeg enables real rendering integration coverage)
 ```
 
@@ -143,5 +166,5 @@ This repository is currently public. Never commit secrets, real account identifi
 
 ## Status
 
-**Stage:** Stage 2 deterministic local rendering, following Stage 1 brand, category, production profile, channel destination, and content management.
+**Stage:** Stage 3 local review, approval, and export, following Stage 2 deterministic local rendering and Stage 1 brand, category, production profile, channel destination, and content management.
 Optional examples are in [config/sample-configurations.json](config/sample-configurations.json); they are not loaded automatically.
